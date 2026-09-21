@@ -34,3 +34,4 @@ DerivedData/
 .aider*
 .claude/
 *.log
+.worktrees/
