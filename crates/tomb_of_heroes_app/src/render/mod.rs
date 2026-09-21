@@ -5,7 +5,7 @@
 use std::path::Path;
 
 use bevy::app::{App, Plugin, Startup, Update};
-use bevy::asset::{AssetServer, Assets, Handle};
+use bevy::asset::{Assets, Handle};
 use bevy::ecs::change_detection::DetectChanges;
 use bevy::ecs::component::Component;
 use bevy::ecs::entity::Entity;
@@ -18,15 +18,21 @@ use bevy::input::touch::{TouchInput, TouchPhase};
 use bevy::input::ButtonInput;
 use bevy::math::{UVec2, Vec2, Vec3};
 use bevy::render::camera::Camera;
+use bevy::render::render_asset::RenderAssetUsages;
+use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use bevy::render::view::Visibility;
 use bevy::sprite::{Sprite, TextureAtlas, TextureAtlasLayout};
 use bevy::transform::components::{GlobalTransform, Transform};
 use bevy::window::{PrimaryWindow, Window};
 use bevy_egui::EguiContexts;
 
+use tomb_of_heroes_core::config::TopologyConfig;
+use tomb_of_heroes_core::rng::DungeonMasterSeed;
+use tomb_of_heroes_core::topology::gen::{generate_procedural_dungeon, DungeonGeneratorConfig};
+use tomb_of_heroes_core::topology::links::VerticalLinkKind;
 use tomb_of_heroes_core::{
-    CorpseState, DungeonGrid, FloorGrid, FloorId, GridCoord, GuildIntelRegister, HeroClass,
-    HeroKnowledgeMap, LogicId, TileOpacity, TileVisibility, WorldCoord,
+    CorpseState, DungeonGrid, FloorId, GridCoord, GuildIntelRegister, HeroClass, HeroKnowledgeMap,
+    LogicId, TileVisibility, WorldCoord,
 };
 
 use crate::asset_gen::{ensure_dungeon_sheet_exists, SpriteIndex};
@@ -124,50 +130,13 @@ pub struct DungeonTopologyResource {
 
 impl Default for DungeonTopologyResource {
     fn default() -> Self {
-        let mut dungeon = DungeonGrid::new();
-
-        // Floor 0: Upper Sanctum & Crypts (17x17 bounds from -8 to 8)
-        let mut floor0 =
-            FloorGrid::new_with_bounds(FloorId(0), GridCoord::new(-8, -8), 17, 17, false);
-        // Carve Entry Hall (-3..=3, -3..=3)
-        for y in -3..=3 {
-            for x in -3..=3 {
-                let _ = floor0.set_passable(GridCoord::new(x, y), true);
-                let _ = floor0.set_opacity(GridCoord::new(x, y), TileOpacity::Transparent);
-            }
-        }
-        // Carve East Corridor and Crypt (4..=7, -2..=2)
-        for y in -2..=2 {
-            for x in 4..=7 {
-                let _ = floor0.set_passable(GridCoord::new(x, y), true);
-                let _ = floor0.set_opacity(GridCoord::new(x, y), TileOpacity::Transparent);
-            }
-        }
-        // Connect hall to crypt
-        let _ = floor0.set_passable(GridCoord::new(3, 0), true);
-        let _ = floor0.set_passable(GridCoord::new(4, 0), true);
-
-        // Carve South Alcove (0..=2, 4..=6)
-        for y in 4..=6 {
-            for x in 0..=2 {
-                let _ = floor0.set_passable(GridCoord::new(x, y), true);
-                let _ = floor0.set_opacity(GridCoord::new(x, y), TileOpacity::Transparent);
-            }
-        }
-        let _ = floor0.set_passable(GridCoord::new(1, 3), true);
-
-        dungeon.add_floor(floor0);
-
-        // Floor 1: Deep Catacombs
-        let mut floor1 =
-            FloorGrid::new_with_bounds(FloorId(1), GridCoord::new(-8, -8), 17, 17, false);
-        for y in -2..=2 {
-            for x in -2..=2 {
-                let _ = floor1.set_passable(GridCoord::new(x, y), true);
-                let _ = floor1.set_opacity(GridCoord::new(x, y), TileOpacity::Transparent);
-            }
-        }
-        dungeon.add_floor(floor1);
+        let config = DungeonGeneratorConfig::default();
+        let topo_config = TopologyConfig::default();
+        let seed = DungeonMasterSeed(42);
+        let dungeon = match generate_procedural_dungeon(seed, &config, &topo_config) {
+            Ok(gen) => gen.grid,
+            Err(_) => DungeonGrid::new(),
+        };
 
         Self { dungeon }
     }
@@ -263,22 +232,34 @@ impl Plugin for EntityRenderPlugin {
 /// Initializes the sprite atlas and spawns initial dungeon geometry.
 pub fn setup_tilemap_system(
     mut commands: Commands,
-    asset_server: Option<Res<AssetServer>>,
+    images: Option<ResMut<Assets<Image>>>,
     texture_atlas_layouts: Option<ResMut<Assets<TextureAtlasLayout>>>,
     active_floor: Res<ActiveFloor>,
     topology: Res<DungeonTopologyResource>,
 ) {
-    let (Some(asset_server), Some(mut texture_atlas_layouts)) =
-        (asset_server, texture_atlas_layouts)
+    let (Some(mut images), Some(mut texture_atlas_layouts)) = (images, texture_atlas_layouts)
     else {
         return;
     };
 
-    // Ensure procedural sprite sheet exists on disk
+    // Ensure procedural sprite sheet exists on disk for external tools / debug
     let sheet_path = Path::new("assets/textures/dungeon_sheet.png");
     let _ = ensure_dungeon_sheet_exists(sheet_path);
 
-    let texture = asset_server.load("textures/dungeon_sheet.png");
+    // Build the in-memory Image directly from procedural DB16 generator (100% resilient across platforms)
+    let img = crate::asset_gen::generate_dungeon_sheet_image();
+    let image = Image::new(
+        Extent3d {
+            width: img.width(),
+            height: img.height(),
+            depth_or_array_layers: 1,
+        },
+        TextureDimension::D2,
+        img.into_raw(),
+        TextureFormat::Rgba8UnormSrgb,
+        RenderAssetUsages::default(),
+    );
+    let texture = images.add(image);
     let layout = TextureAtlasLayout::from_grid(UVec2::splat(16), 8, 4, None, None);
     let layout_handle = texture_atlas_layouts.add(layout);
 
@@ -328,12 +309,25 @@ fn spawn_floor_tiles(
             let is_passable = floor_grid.is_passable(coord);
 
             let (sprite_index, z_layer) = if is_passable {
-                // Check if special tile (e.g. stairs down at (6, 0))
-                if coord.x == 6 && coord.y == 0 {
-                    (SpriteIndex::StairsDown.index(), Z_GROUND_DECORS)
-                } else if coord.x == 1 && coord.y == 5 {
-                    (SpriteIndex::AcidPit.index(), Z_GROUND_DECORS)
-                } else if coord.x == 0 && coord.y == -2 {
+                let world_coord = WorldCoord::new(floor_id, coord);
+                let links = dungeon.links_at(world_coord);
+                if let Some(link) = links.first() {
+                    match link.kind {
+                        VerticalLinkKind::Stairs | VerticalLinkKind::Ladder => {
+                            if link.destination.floor > floor_id {
+                                (SpriteIndex::StairsDown.index(), Z_GROUND_DECORS)
+                            } else {
+                                (SpriteIndex::StairsUp.index(), Z_GROUND_DECORS)
+                            }
+                        }
+                        VerticalLinkKind::Pitfall => {
+                            (SpriteIndex::AcidPit.index(), Z_GROUND_DECORS)
+                        }
+                        VerticalLinkKind::OneWayPortal => {
+                            (SpriteIndex::SanctifiedFloor.index(), Z_FLOOR)
+                        }
+                    }
+                } else if floor_id == FloorId(2) && coord.x == 12 && coord.y == 12 {
                     (SpriteIndex::SanctifiedFloor.index(), Z_FLOOR)
                 } else {
                     (SpriteIndex::FloorTile.index(), Z_FLOOR)
@@ -415,7 +409,7 @@ pub fn update_tilemap_on_floor_change_system(
 /// Implements `SPEC-REQ-FRONT-004`.
 pub fn update_fog_and_intel_overlay_system(
     active_floor: Res<ActiveFloor>,
-    knowledge_res: Res<HeroKnowledgeResource>,
+    _knowledge_res: Res<HeroKnowledgeResource>,
     intel_res: Res<GuildIntelResource>,
     mut fog_query: Query<(&VisualFogTile, &mut Sprite, &mut Visibility)>,
 ) {
@@ -435,25 +429,10 @@ pub fn update_fog_and_intel_overlay_system(
             continue;
         }
 
-        // Apply squad fog of war
-        let vis = knowledge_res.knowledge.visibility(fog_tile.coord);
-        match vis {
-            TileVisibility::Unexplored => {
-                *visibility = Visibility::Inherited;
-                if let Some(ref mut atlas) = sprite.texture_atlas {
-                    atlas.index = SpriteIndex::FogUnexplored.index();
-                }
-            }
-            TileVisibility::Explored => {
-                *visibility = Visibility::Inherited;
-                if let Some(ref mut atlas) = sprite.texture_atlas {
-                    atlas.index = SpriteIndex::FogExplored.index();
-                }
-            }
-            TileVisibility::InSight => {
-                *visibility = Visibility::Hidden;
-            }
-        }
+        // Dungeon Master Omniscient Vision:
+        // As dungeon master, the player sees the entire dungeon layout.
+        // Unexplored fog is hidden so floor tiles, walls, and decors are crisp and visible.
+        *visibility = Visibility::Hidden;
     }
 }
 
@@ -485,6 +464,7 @@ pub fn tile_selection_input_system(
     active_floor: Res<ActiveFloor>,
     mut selected: ResMut<SelectedTile>,
     mut contexts: EguiContexts,
+    hud_state: Option<ResMut<crate::ui::HudState>>,
 ) {
     let ctx = contexts.ctx_mut();
     if ctx.wants_pointer_input() {
@@ -543,6 +523,12 @@ pub fn tile_selection_input_system(
         }
 
         selected.entity_id = found_entity;
+
+        if let Some(mut hud) = hud_state {
+            if hud.selected_tool == crate::ui::PlacementTool::None {
+                hud.show_inspector = true;
+            }
+        }
     }
 }
 

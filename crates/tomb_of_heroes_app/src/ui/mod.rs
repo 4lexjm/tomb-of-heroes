@@ -16,7 +16,7 @@ use tomb_of_heroes_core::save::{
     export_to_base64_string, import_from_base64_string, pack_world, unpack_world,
     DEFAULT_CAMPAIGN_ID, DEFAULT_COMPRESSION_LEVEL,
 };
-use tomb_of_heroes_core::topology::{FloorId, GridCoord, TileOpacity, WorldCoord};
+use tomb_of_heroes_core::topology::{FloorId, TileOpacity, WorldCoord};
 
 use crate::render::{ActiveFloor, DungeonTopologyResource, SelectedTile};
 use crate::simulation::WorldSimulation;
@@ -45,6 +45,7 @@ pub struct HudState {
     pub alert_level: u32,
     pub is_paused: bool,
     pub selected_tool: PlacementTool,
+    pub show_inspector: bool,
     pub show_chrono_window: bool,
     pub rewind_ticks: u64,
     pub show_save_modal: bool,
@@ -67,6 +68,7 @@ impl Default for HudState {
             alert_level: 2, // 0: Normal, 1: Suspicieux, 2: Élevé, 3: Critique
             is_paused: false,
             selected_tool: PlacementTool::None,
+            show_inspector: false,
             show_chrono_window: false,
             rewind_ticks: 20,
             show_save_modal: false,
@@ -119,7 +121,7 @@ pub fn hud_status_bar_system(
     mut contexts: EguiContexts,
     mut hud_state: ResMut<HudState>,
     mut active_floor: ResMut<ActiveFloor>,
-    mut simulation: ResMut<WorldSimulation>,
+    simulation: Res<WorldSimulation>,
 ) {
     let ctx = contexts.ctx_mut();
 
@@ -133,10 +135,17 @@ pub fn hud_status_bar_system(
     hud_state.heart_max_hp = simulation.heart().max_hp;
 
     egui::TopBottomPanel::top("status_bar")
-        .frame(egui::Frame::side_top_panel(&ctx.style()).inner_margin(8.0))
+        .frame(
+            egui::Frame::side_top_panel(&ctx.style()).inner_margin(egui::Margin {
+                left: 10.0,
+                right: 10.0,
+                top: 44.0, // Safe margin for mobile system status bar and camera notch
+                bottom: 6.0,
+            }),
+        )
         .show(ctx, |ui| {
-            ui.horizontal_wrapped(|ui| {
-                // Mana Gauge
+            ui.horizontal(|ui| {
+                // Left: Gauges (Mana & Dungeon Heart)
                 let mana_ratio = if hud_state.max_mana > 0 {
                     (hud_state.mana as f32 / hud_state.max_mana as f32).clamp(0.0, 1.0)
                 } else {
@@ -144,41 +153,10 @@ pub fn hud_status_bar_system(
                 };
                 ui.add(
                     ProgressBar::new(mana_ratio)
-                        .text(format!("Mana: {}/{}", hud_state.mana, hud_state.max_mana))
-                        .desired_width(120.0),
+                        .text(format!("💧 {}/{}", hud_state.mana, hud_state.max_mana))
+                        .desired_width(105.0),
                 );
 
-                ui.separator();
-
-                // Infamy Display
-                ui.label(
-                    RichText::new(format!("Infamie: {}", hud_state.infamy))
-                        .color(Color32::from_rgb(0xF4, 0xB4, 0x1B))
-                        .strong(),
-                );
-
-                ui.separator();
-
-                // Wave & Phase Display
-                let (phase_str, phase_color) = match hud_state.wave_phase {
-                    WavePhase::Preparation => ("PRÉPARATION", Color32::from_rgb(0x5A, 0xC5, 0x4F)),
-                    WavePhase::Incursion => ("INCURSION", Color32::from_rgb(0xFF, 0x44, 0x44)),
-                    WavePhase::Debriefing => ("DÉBRIEFING", Color32::from_rgb(0xF4, 0xB4, 0x1B)),
-                    WavePhase::Victory => ("VICTOIRE", Color32::from_rgb(0x00, 0xE5, 0xFF)),
-                    WavePhase::Defeat => ("DÉFAITE", Color32::from_rgb(0xFF, 0x00, 0x00)),
-                };
-                ui.label(
-                    RichText::new(format!(
-                        "Vague {}/{} [{}]",
-                        hud_state.wave, hud_state.max_waves, phase_str
-                    ))
-                    .color(phase_color)
-                    .strong(),
-                );
-
-                ui.separator();
-
-                // Heart Health Gauge
                 let heart_ratio = if hud_state.heart_max_hp > 0 {
                     (hud_state.heart_hp as f32 / hud_state.heart_max_hp as f32).clamp(0.0, 1.0)
                 } else {
@@ -187,117 +165,95 @@ pub fn hud_status_bar_system(
                 ui.add(
                     ProgressBar::new(heart_ratio)
                         .text(format!(
-                            "Cœur: {}/{} PV",
+                            "💖 {}/{}",
                             hud_state.heart_hp, hud_state.heart_max_hp
                         ))
-                        .desired_width(120.0),
+                        .desired_width(105.0),
                 );
 
-                ui.separator();
+                // Punch-hole camera safety gap in the center
+                ui.add_space(24.0);
 
-                // Phase Action Button
-                if hud_state.wave_phase == WavePhase::Preparation {
+                // Right: Controls, Floor Dropdown, Wave, Infamy, Chrono & Save
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if ui
-                        .add(touch_btn(
-                            RichText::new("⚔ Lancer Incursion")
-                                .color(Color32::from_rgb(0xFF, 0xDD, 0x55))
-                                .strong(),
-                        ))
+                        .add(touch_btn("💾"))
+                        .on_hover_text("Sauvegardes")
                         .clicked()
                     {
-                        simulation.world_mut().start_incursion();
+                        hud_state.show_save_modal = !hud_state.show_save_modal;
                     }
-                    ui.separator();
-                } else if hud_state.wave_phase == WavePhase::Debriefing {
+
+                    let chrono_icon = if hud_state.show_chrono_window {
+                        "⏳[X]"
+                    } else {
+                        "⏳"
+                    };
                     if ui
-                        .add(touch_btn(
-                            RichText::new("➡ Vague Suivante")
-                                .color(Color32::from_rgb(0x55, 0xFF, 0x55))
-                                .strong(),
-                        ))
+                        .add(touch_btn(chrono_icon))
+                        .on_hover_text("Chronomancie")
                         .clicked()
                     {
-                        simulation.world_mut().campaign_mut().advance_to_next_wave();
+                        hud_state.show_chrono_window = !hud_state.show_chrono_window;
                     }
-                    ui.separator();
-                }
 
-                // Alert Level
-                let (alert_str, alert_color) = match hud_state.alert_level {
-                    0 => ("CALME", Color32::from_rgb(0x5A, 0xC5, 0x4F)),
-                    1 => ("VIGILANT", Color32::from_rgb(0xCF, 0x65, 0x1F)),
-                    2 => ("ÉLEVÉ", Color32::from_rgb(0xA5, 0x30, 0x30)),
-                    _ => ("CRITIQUE", Color32::from_rgb(0xFF, 0x00, 0x00)),
-                };
-                ui.label(
-                    RichText::new(format!("Alerte: {alert_str}"))
-                        .color(alert_color)
+                    let pause_icon = if hud_state.is_paused { "▶" } else { "⏸" };
+                    if ui
+                        .add(touch_btn(pause_icon))
+                        .on_hover_text("Pause / Play")
+                        .clicked()
+                    {
+                        hud_state.is_paused = !hud_state.is_paused;
+                    }
+
+                    let tick = simulation.current_tick().0;
+                    ui.label(RichText::new(format!("T:{tick}")).monospace().strong());
+
+                    // Floor Selector Dropdown
+                    egui::ComboBox::from_id_salt("floor_dropdown")
+                        .selected_text(format!("Étage {} ▾", active_floor.0 .0))
+                        .show_ui(ui, |ui| {
+                            ui.selectable_value(
+                                &mut active_floor.0,
+                                FloorId(0),
+                                "Étage 0 : Sanctuaire",
+                            );
+                            ui.selectable_value(
+                                &mut active_floor.0,
+                                FloorId(1),
+                                "Étage 1 : Catacombes",
+                            );
+                            ui.selectable_value(
+                                &mut active_floor.0,
+                                FloorId(2),
+                                "Étage 2 : Crypte du Cœur",
+                            );
+                        });
+
+                    // Wave & Phase Pill
+                    let (phase_str, phase_color) = match hud_state.wave_phase {
+                        WavePhase::Preparation => ("PRÉP", Color32::from_rgb(0x5A, 0xC5, 0x4F)),
+                        WavePhase::Incursion => ("INCURSION", Color32::from_rgb(0xFF, 0x44, 0x44)),
+                        WavePhase::Debriefing => ("DÉBRIEF", Color32::from_rgb(0xF4, 0xB4, 0x1B)),
+                        WavePhase::Victory => ("VICTOIRE", Color32::from_rgb(0x00, 0xE5, 0xFF)),
+                        WavePhase::Defeat => ("DÉFAITE", Color32::from_rgb(0xFF, 0x00, 0x00)),
+                    };
+                    ui.label(
+                        RichText::new(format!(
+                            "Vague {}/{} [{}]",
+                            hud_state.wave, hud_state.max_waves, phase_str
+                        ))
+                        .color(phase_color)
                         .strong(),
-                );
+                    );
 
-                ui.separator();
-
-                // Floor Selectors (>= 44x44 pt)
-                let n0_active = active_floor.0 == FloorId(0);
-                let n0_color = if n0_active {
-                    Color32::LIGHT_BLUE
-                } else {
-                    Color32::GRAY
-                };
-                if ui
-                    .add(touch_btn(RichText::new("N0").color(n0_color).strong()))
-                    .clicked()
-                {
-                    active_floor.0 = FloorId(0);
-                }
-
-                let n1_active = active_floor.0 == FloorId(1);
-                let n1_color = if n1_active {
-                    Color32::LIGHT_BLUE
-                } else {
-                    Color32::GRAY
-                };
-                if ui
-                    .add(touch_btn(RichText::new("N1").color(n1_color).strong()))
-                    .clicked()
-                {
-                    active_floor.0 = FloorId(1);
-                }
-
-                ui.separator();
-
-                // Simulation Ticks and Controls
-                let tick = simulation.current_tick().0;
-                ui.label(RichText::new(format!("T: {tick}")).strong());
-
-                let pause_icon = if hud_state.is_paused {
-                    "▶ Play"
-                } else {
-                    "⏸ Pause"
-                };
-                if ui.add(touch_btn(pause_icon)).clicked() {
-                    hud_state.is_paused = !hud_state.is_paused;
-                }
-
-                if ui.add(touch_btn("⏭ Step")).clicked() {
-                    simulation.step();
-                }
-
-                ui.separator();
-
-                // Chrono & Save buttons
-                let chrono_btn_text = if hud_state.show_chrono_window {
-                    "⏳ Chrono [X]"
-                } else {
-                    "⏳ Chrono"
-                };
-                if ui.add(touch_btn(chrono_btn_text)).clicked() {
-                    hud_state.show_chrono_window = !hud_state.show_chrono_window;
-                }
-
-                if ui.add(touch_btn("💾 Sauvegardes")).clicked() {
-                    hud_state.show_save_modal = !hud_state.show_save_modal;
-                }
+                    // Infamy
+                    ui.label(
+                        RichText::new(format!("🔥 {}", hud_state.infamy))
+                            .color(Color32::from_rgb(0xF4, 0xB4, 0x1B))
+                            .strong(),
+                    );
+                });
             });
         });
 }
@@ -310,70 +266,156 @@ pub fn hud_action_bar_system(
     mut contexts: EguiContexts,
     mut hud_state: ResMut<HudState>,
     mut simulation: ResMut<WorldSimulation>,
-    active_floor: Res<ActiveFloor>,
+    _active_floor: Res<ActiveFloor>,
 ) {
     let ctx = contexts.ctx_mut();
 
     egui::TopBottomPanel::bottom("action_bar")
-        .frame(egui::Frame::side_top_panel(&ctx.style()).inner_margin(8.0))
+        .frame(
+            egui::Frame::side_top_panel(&ctx.style()).inner_margin(egui::Margin {
+                left: 10.0,
+                right: 10.0,
+                top: 6.0,
+                bottom: 10.0,
+            }),
+        )
         .show(ctx, |ui| {
-            ui.horizontal_wrapped(|ui| {
-                ui.label(RichText::new("Outils:").strong());
+            // Line 1: Contextual Info Banner for Selected Placement Tool
+            let (title, cost_str, desc) = match hud_state.selected_tool {
+                PlacementTool::Wall => (
+                    "🧱 Mur de Pierre",
+                    "10 💧",
+                    "Bloque le passage et dévie la trajectoire des héros.",
+                ),
+                PlacementTool::Spikes => (
+                    "⚡ Piège à Piques",
+                    "15 💧",
+                    "Inflige 25 dégâts physiques aux aventuriers au franchissement.",
+                ),
+                PlacementTool::Acid => (
+                    "🧪 Fosse d'Acide",
+                    "25 💧",
+                    "Dégâts continus et dégradation d'armure.",
+                ),
+                PlacementTool::Skeleton => (
+                    "💀 Squelette Guerrier",
+                    "20 💧",
+                    "Gardien de base patrouillant le secteur.",
+                ),
+                PlacementTool::Zombie => (
+                    "🧟 Zombie Pestilentiel",
+                    "35 💧",
+                    "Colosse résistant qui diffuse terreur et effroi.",
+                ),
+                PlacementTool::None => (
+                    "ℹ Mode Tactique",
+                    "-",
+                    "Sélectionnez un outil pour le poser, ou touchez une case pour l'inspecter.",
+                ),
+            };
 
-                let tools = [
-                    (PlacementTool::Wall, "🧱 Mur"),
-                    (PlacementTool::Spikes, "⚡ Piques"),
-                    (PlacementTool::Acid, "🧪 Acide"),
-                    (PlacementTool::Skeleton, "💀 Squelette"),
-                    (PlacementTool::Zombie, "🧟 Zombie"),
-                ];
-
-                for (tool, label) in tools {
-                    let is_active = hud_state.selected_tool == tool;
-                    let text = if is_active {
-                        RichText::new(format!("[{label}]"))
-                            .color(Color32::YELLOW)
-                            .strong()
-                    } else {
-                        RichText::new(label)
-                    };
-
-                    if ui.add(touch_btn(text)).clicked() {
-                        hud_state.selected_tool =
-                            if is_active { PlacementTool::None } else { tool };
-                    }
-                }
-
-                ui.separator();
-
-                // Wave Incursion Trigger
-                if ui
-                    .add(touch_btn(
-                        RichText::new("⚔ Lancer Incursion")
-                            .color(Color32::LIGHT_RED)
+            ui.horizontal(|ui| {
+                ui.label(
+                    RichText::new(title)
+                        .color(Color32::from_rgb(0xFF, 0xDD, 0x55))
+                        .strong(),
+                );
+                if hud_state.selected_tool != PlacementTool::None {
+                    ui.label(
+                        RichText::new(format!("(Coût: {cost_str})"))
+                            .color(Color32::from_rgb(0x41, 0x7E, 0xBD))
                             .strong(),
-                    ))
-                    .clicked()
-                {
-                    // Spawn adventurer squad at dungeon entrance (0, -3)
-                    if let Ok(id) = simulation.allocate_id() {
-                        let hero = ChronoHero::new_ordinary(
-                            id,
-                            HeroClass::Warrior,
-                            WorldCoord::new(active_floor.0, GridCoord::new(0, -3)),
-                        );
-                        simulation.register_hero(hero);
-                    }
-                    if let Ok(id) = simulation.allocate_id() {
-                        let hero = ChronoHero::new_aware(
-                            id,
-                            HeroClass::Mage,
-                            WorldCoord::new(active_floor.0, GridCoord::new(1, -3)),
-                        );
-                        simulation.register_hero(hero);
-                    }
-                    hud_state.infamy = hud_state.infamy.saturating_add(25);
+                    );
                 }
+                ui.label(
+                    RichText::new(format!("— {desc}"))
+                        .color(Color32::from_rgb(0xCF, 0xCF, 0xCF))
+                        .italics(),
+                );
+            });
+
+            ui.add_space(4.0);
+
+            // Line 2: Scrollable Tools on the Left + Fixed Action Button on the Right
+            ui.horizontal(|ui| {
+                let avail_w = ui.available_width();
+                let right_btn_w = 96.0;
+                let scroll_w = (avail_w - right_btn_w - 8.0).max(120.0);
+
+                // Left: Single-Row Horizontal Scroll Area
+                ui.allocate_ui(egui::vec2(scroll_w, 48.0), |ui| {
+                    egui::ScrollArea::horizontal()
+                        .auto_shrink([false, false])
+                        .show(ui, |ui| {
+                            ui.horizontal(|ui| {
+                                let tools = [
+                                    (PlacementTool::Wall, "🧱\n10💧"),
+                                    (PlacementTool::Spikes, "⚡\n15💧"),
+                                    (PlacementTool::Acid, "🧪\n25💧"),
+                                    (PlacementTool::Skeleton, "💀\n20💧"),
+                                    (PlacementTool::Zombie, "🧟\n35💧"),
+                                ];
+
+                                for (tool, label) in tools {
+                                    let is_active = hud_state.selected_tool == tool;
+                                    let text = if is_active {
+                                        RichText::new(label).color(Color32::YELLOW).strong()
+                                    } else {
+                                        RichText::new(label).color(Color32::WHITE)
+                                    };
+
+                                    let btn = egui::Button::new(text)
+                                        .min_size(egui::vec2(44.0, 44.0))
+                                        .selected(is_active);
+
+                                    if ui.add(btn).clicked() {
+                                        hud_state.selected_tool =
+                                            if is_active { PlacementTool::None } else { tool };
+                                    }
+                                }
+                            });
+                        });
+                });
+
+                // Right: Fixed Action / Attack Button pinned to bottom-right
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                    match hud_state.wave_phase {
+                        WavePhase::Preparation => {
+                            let btn = egui::Button::new(
+                                RichText::new("⚔ ASSAUT")
+                                    .color(Color32::from_rgb(0xFF, 0xDD, 0x55))
+                                    .strong(),
+                            )
+                            .min_size(egui::vec2(right_btn_w, 44.0));
+                            if ui.add(btn).clicked() {
+                                simulation.world_mut().start_incursion();
+                            }
+                        }
+                        WavePhase::Incursion => {
+                            let btn = egui::Button::new(
+                                RichText::new("⏭ STEP")
+                                    .color(Color32::from_rgb(0x55, 0xFF, 0x55))
+                                    .strong(),
+                            )
+                            .min_size(egui::vec2(right_btn_w, 44.0));
+                            if ui.add(btn).clicked() {
+                                simulation.step();
+                            }
+                        }
+                        WavePhase::Debriefing => {
+                            let btn = egui::Button::new(
+                                RichText::new("➡ SUIVANT")
+                                    .color(Color32::from_rgb(0x55, 0xFF, 0x55))
+                                    .strong(),
+                            )
+                            .min_size(egui::vec2(right_btn_w, 44.0));
+                            if ui.add(btn).clicked() {
+                                simulation.world_mut().campaign_mut().advance_to_next_wave();
+                            }
+                        }
+                        WavePhase::Victory | WavePhase::Defeat => {}
+                    }
+                });
             });
         });
 }
@@ -537,14 +579,21 @@ pub fn hud_inspector_panel_system(
     topology: Res<DungeonTopologyResource>,
     active_floor: Res<ActiveFloor>,
 ) {
+    if !hud_state.show_inspector {
+        return;
+    }
     let Some(coord) = selected.coord else {
         return;
     };
 
     let ctx = contexts.ctx_mut();
+    let mut is_open = hud_state.show_inspector;
 
     egui::Window::new("🔍 Inspecteur Tactique")
-        .anchor(egui::Align2::RIGHT_TOP, egui::vec2(-12.0, 56.0))
+        .open(&mut is_open)
+        .default_pos(egui::pos2(16.0, 110.0))
+        .collapsible(true)
+        .movable(true)
         .resizable(false)
         .show(ctx, |ui| {
             ui.label(RichText::new(format!("Case: ({}, {})", coord.x, coord.y)).strong());
@@ -622,6 +671,8 @@ pub fn hud_inspector_panel_system(
                 }
             }
         });
+
+    hud_state.show_inspector = is_open;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -646,6 +697,22 @@ pub fn hud_placement_execution_system(
     match hud_state.selected_tool {
         PlacementTool::Wall => {
             if let Some(floor) = topology.dungeon.floor_mut(active_floor.0) {
+                let current = floor.is_passable(coord);
+                let _ = floor.set_passable(coord, !current);
+                let _ = floor.set_opacity(
+                    coord,
+                    if current {
+                        TileOpacity::Opaque
+                    } else {
+                        TileOpacity::Transparent
+                    },
+                );
+            }
+            if let Some(floor) = simulation
+                .world_mut()
+                .dungeon_mut()
+                .floor_mut(active_floor.0)
+            {
                 let current = floor.is_passable(coord);
                 let _ = floor.set_passable(coord, !current);
                 let _ = floor.set_opacity(

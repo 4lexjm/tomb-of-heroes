@@ -78,7 +78,12 @@ impl Plugin for PixelCameraPlugin {
 
 /// Spawns the 2D orthographic camera with nearest-neighbor projection settings.
 pub fn setup_pixel_camera_system(mut commands: Commands) {
-    commands.spawn((Camera2d, PixelCamera, Transform::from_xyz(0.0, 0.0, 999.0)));
+    // Center of 24x24 tilemap: 12 * 16.0 = 192.0, -12 * 16.0 = -192.0
+    commands.spawn((
+        Camera2d,
+        PixelCamera,
+        Transform::from_xyz(192.0, -192.0, 999.0),
+    ));
 }
 
 /// Computes integer scaling and configures the camera's orthographic scale.

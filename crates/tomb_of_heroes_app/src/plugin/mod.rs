@@ -29,25 +29,43 @@ impl Plugin for SimulationPlugin {
 /// Populates default heroes and fallen adventurers for visual demonstration and inspection.
 fn populate_default_scenario(sim: &mut WorldSimulation) {
     use tomb_of_heroes_core::chrono::memory::ChronoHero;
+    use tomb_of_heroes_core::config::TopologyConfig;
     use tomb_of_heroes_core::necro::{Corpse, CorpseState, HeroClass};
+    use tomb_of_heroes_core::rng::DungeonMasterSeed;
+    use tomb_of_heroes_core::topology::gen::{generate_procedural_dungeon, DungeonGeneratorConfig};
     use tomb_of_heroes_core::topology::{FloorId, GridCoord, WorldCoord};
+
+    let gen_config = DungeonGeneratorConfig::default();
+    let topo_config = TopologyConfig::default();
+    let seed = DungeonMasterSeed(42);
+
+    let dungeon_gen = match generate_procedural_dungeon(seed, &gen_config, &topo_config) {
+        Ok(gen) => {
+            *sim.world_mut().dungeon_mut() = gen.grid.clone();
+            Some(gen)
+        }
+        Err(_) => None,
+    };
+
+    let spawn_coord = dungeon_gen
+        .as_ref()
+        .map(|g| g.spawn_point.coord)
+        .unwrap_or(GridCoord::new(6, 6));
 
     // Hero 1: Frontline Warrior
     if let Ok(id) = sim.allocate_id() {
         let hero = ChronoHero::new_ordinary(
             id,
             HeroClass::Warrior,
-            WorldCoord::new(FloorId(0), GridCoord::new(0, -1)),
+            WorldCoord::new(FloorId(0), spawn_coord),
         );
         sim.register_hero(hero);
     }
     // Hero 2: Chrono-aware Mage
     if let Ok(id) = sim.allocate_id() {
-        let hero = ChronoHero::new_aware(
-            id,
-            HeroClass::Mage,
-            WorldCoord::new(FloorId(0), GridCoord::new(1, 0)),
-        );
+        let mage_coord = GridCoord::new(spawn_coord.x + 1, spawn_coord.y);
+        let hero =
+            ChronoHero::new_aware(id, HeroClass::Mage, WorldCoord::new(FloorId(0), mage_coord));
         sim.register_hero(hero);
     }
 
@@ -58,9 +76,11 @@ fn populate_default_scenario(sim: &mut WorldSimulation) {
         if let Ok(src) = sim.allocate_id() {
             let mut corpse = Corpse::new(id, src, HeroClass::Rogue, sim.config());
             corpse.state = CorpseState::Intact;
-            let _ = sim
-                .corpses_mut()
-                .place_corpse(corpse, GridCoord::new(-2, 2), &corpse_cfg);
+            let _ = sim.corpses_mut().place_corpse(
+                corpse,
+                GridCoord::new(spawn_coord.x + 2, spawn_coord.y),
+                &corpse_cfg,
+            );
         }
     }
     // Corpse 2: Damaged Cleric corpse
@@ -69,9 +89,11 @@ fn populate_default_scenario(sim: &mut WorldSimulation) {
             let mut corpse = Corpse::new(id, src, HeroClass::Cleric, sim.config());
             corpse.state = CorpseState::Damaged;
             corpse.structural_hp = 20;
-            let _ = sim
-                .corpses_mut()
-                .place_corpse(corpse, GridCoord::new(2, 2), &corpse_cfg);
+            let _ = sim.corpses_mut().place_corpse(
+                corpse,
+                GridCoord::new(spawn_coord.x, spawn_coord.y + 1),
+                &corpse_cfg,
+            );
         }
     }
     // Corpse 3: Bones / Destroyed
@@ -80,9 +102,11 @@ fn populate_default_scenario(sim: &mut WorldSimulation) {
             let mut corpse = Corpse::new(id, src, HeroClass::Warrior, sim.config());
             corpse.state = CorpseState::Destroyed;
             corpse.structural_hp = 0;
-            let _ = sim
-                .corpses_mut()
-                .place_corpse(corpse, GridCoord::new(5, -1), &corpse_cfg);
+            let _ = sim.corpses_mut().place_corpse(
+                corpse,
+                GridCoord::new(spawn_coord.x + 1, spawn_coord.y + 1),
+                &corpse_cfg,
+            );
         }
     }
 }
