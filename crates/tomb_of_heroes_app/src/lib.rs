@@ -28,3 +28,10 @@ pub fn build_app() -> bevy::app::App {
     app.add_plugins(TombOfHeroesAppPlugin);
     app
 }
+
+/// Mobile entry point (Android NativeActivity and iOS UIKit bootstrapping).
+#[bevy::prelude::bevy_main]
+#[allow(dead_code)]
+fn main() {
+    build_app().run();
+}

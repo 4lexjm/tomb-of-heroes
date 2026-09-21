@@ -102,7 +102,7 @@ jobs:
           fi
 
       - name: Build Release APK
-        run: cargo apk build --package tomb_of_heroes_app --release
+        run: cargo apk build --package tomb_of_heroes_app --lib --release
 
       - name: Upload Android APK
         uses: actions/upload-artifact@v4

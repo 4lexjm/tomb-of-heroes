@@ -61,10 +61,10 @@ export ANDROID_NDK_ROOT="$ANDROID_SDK_ROOT/ndk/26.1.10909125"
 
 ```bash
 # Debug APK
-cargo apk build -p tomb_of_heroes_app
+cargo apk build -p tomb_of_heroes_app --lib
 
 # Release APK (optimized: opt-level=z, LTO, stripped)
-cargo apk build -p tomb_of_heroes_app --release
+cargo apk build -p tomb_of_heroes_app --lib --release
 ```
 
 The APK is output to `target/release/apk/tomb_of_heroes_app.apk`.
