@@ -15,3 +15,11 @@ uuid = { workspace = true }
 
 [lints]
 workspace = true
+
+[[test]]
+name = "test_basis_points_rounding"
+path = "tests/m1_arch/test_basis_points_rounding.rs"
+
+[[test]]
+name = "test_game_config"
+path = "tests/m1_arch/test_game_config.rs"
