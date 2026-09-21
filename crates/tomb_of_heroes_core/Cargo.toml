@@ -210,4 +210,8 @@ path = "tests/m6_save/test_save_magic_header_invalid.rs"
 name = "test_empty_save_payload"
 path = "tests/m6_save/test_empty_save_payload.rs"
 
+[[test]]
+name = "test_procedural_dungeon_generation"
+path = "tests/m2_topo/test_procedural_dungeon_generation.rs"
+
 
