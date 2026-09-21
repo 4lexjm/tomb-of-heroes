@@ -937,6 +937,37 @@ pub fn load_game_logo_image() -> bevy::image::Image {
     )
 }
 
+/// Extracts a 16x16 tile at (col, row) and scales it 2x (32x32) using nearest-neighbor for sharp UI rendering.
+#[must_use]
+pub fn extract_tile_image(col: u32, row: u32) -> bevy::image::Image {
+    let sheet = generate_dungeon_sheet_image();
+    let x_offset = col * TILE_SIZE;
+    let y_offset = row * TILE_SIZE;
+    let target_size = 32u32;
+    let mut rgba_raw = Vec::with_capacity((target_size * target_size * 4) as usize);
+
+    for ty in 0..target_size {
+        let sy = y_offset + (ty / 2);
+        for tx in 0..target_size {
+            let sx = x_offset + (tx / 2);
+            let px = sheet.get_pixel(sx, sy);
+            rgba_raw.extend_from_slice(&px.0);
+        }
+    }
+
+    bevy::image::Image::new(
+        bevy::render::render_resource::Extent3d {
+            width: target_size,
+            height: target_size,
+            depth_or_array_layers: 1,
+        },
+        bevy::render::render_resource::TextureDimension::D2,
+        rgba_raw,
+        bevy::render::render_resource::TextureFormat::Rgba8UnormSrgb,
+        bevy::render::render_asset::RenderAssetUsages::default(),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -966,5 +997,12 @@ mod tests {
         let logo_img = load_game_logo_image();
         assert_eq!(logo_img.width(), 256);
         assert_eq!(logo_img.height(), 256);
+    }
+
+    #[test]
+    fn test_extract_tile_image_dimensions() {
+        let tile_img = extract_tile_image(1, 0);
+        assert_eq!(tile_img.width(), 32);
+        assert_eq!(tile_img.height(), 32);
     }
 }

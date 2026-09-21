@@ -125,7 +125,11 @@ pub fn hud_status_bar_system(
     mut hud_state: ResMut<HudState>,
     mut active_floor: ResMut<ActiveFloor>,
     simulation: Res<WorldSimulation>,
+    logo_res: Option<Res<crate::render::GameLogoResource>>,
 ) {
+    let logo_tex_id = logo_res
+        .as_ref()
+        .map(|res| contexts.add_image(res.texture.clone()));
     let ctx = contexts.ctx_mut();
 
     hud_state.mana = simulation.mana();
@@ -140,57 +144,67 @@ pub fn hud_status_bar_system(
     egui::TopBottomPanel::top("status_bar")
         .frame(
             egui::Frame::side_top_panel(&ctx.style()).inner_margin(egui::Margin {
-                left: 10.0,
-                right: 10.0,
-                top: 44.0, // Safe margin for mobile system status bar and camera notch
+                left: 14.0,
+                right: 14.0,
+                top: 36.0, // Safe margin for mobile system status bar and camera notch
                 bottom: 6.0,
             }),
         )
         .show(ctx, |ui| {
+            // Row 1: Brand & Logo | Wave Pill | Quick Actions (Pause, Chrono, Save)
             ui.horizontal(|ui| {
-                // Dark & macabre game logo brand button
-                if ui
-                    .add(touch_btn(
+                // Brand button with dark & macabre logo image
+                let brand_clicked = if let Some(tex_id) = logo_tex_id {
+                    let img = egui::Image::new(egui::load::SizedTexture::new(
+                        tex_id,
+                        egui::vec2(24.0, 24.0),
+                    ));
+                    ui.add(
+                        egui::Button::image_and_text(
+                            img,
+                            RichText::new("TOMB OF HEROES")
+                                .color(Color32::from_rgb(0x00, 0xE5, 0xFF))
+                                .strong()
+                                .size(12.0),
+                        )
+                        .min_size(egui::vec2(44.0, 44.0)),
+                    )
+                    .on_hover_text("Le Sanctuaire & Lore")
+                    .clicked()
+                } else {
+                    ui.add(touch_btn(
                         RichText::new("💀 TOMB OF HEROES")
                             .color(Color32::from_rgb(0x00, 0xE5, 0xFF))
-                            .strong(),
+                            .strong()
+                            .size(12.0),
                     ))
-                    .on_hover_text("Tomb of Heroes — Sanctuaire & Lore")
+                    .on_hover_text("Le Sanctuaire & Lore")
                     .clicked()
-                {
+                };
+
+                if brand_clicked {
                     hud_state.show_about_modal = !hud_state.show_about_modal;
                 }
 
-                // Left: Gauges (Mana & Dungeon Heart)
-                let mana_ratio = if hud_state.max_mana > 0 {
-                    (hud_state.mana as f32 / hud_state.max_mana as f32).clamp(0.0, 1.0)
-                } else {
-                    0.0
+                // Wave & Phase Pill centered
+                let (phase_str, phase_color) = match hud_state.wave_phase {
+                    WavePhase::Preparation => ("PRÉP", Color32::from_rgb(0x5A, 0xC5, 0x4F)),
+                    WavePhase::Incursion => ("ASSAUT", Color32::from_rgb(0xFF, 0x44, 0x44)),
+                    WavePhase::Debriefing => ("FIN", Color32::from_rgb(0xF4, 0xB4, 0x1B)),
+                    WavePhase::Victory => ("VICTOIRE", Color32::from_rgb(0x00, 0xE5, 0xFF)),
+                    WavePhase::Defeat => ("DÉFAITE", Color32::from_rgb(0xFF, 0x00, 0x00)),
                 };
-                ui.add(
-                    ProgressBar::new(mana_ratio)
-                        .text(format!("💧 {}/{}", hud_state.mana, hud_state.max_mana))
-                        .desired_width(105.0),
+                ui.label(
+                    RichText::new(format!(
+                        "V.{}/{} [{}]",
+                        hud_state.wave, hud_state.max_waves, phase_str
+                    ))
+                    .color(phase_color)
+                    .strong()
+                    .size(12.0),
                 );
 
-                let heart_ratio = if hud_state.heart_max_hp > 0 {
-                    (hud_state.heart_hp as f32 / hud_state.heart_max_hp as f32).clamp(0.0, 1.0)
-                } else {
-                    0.0
-                };
-                ui.add(
-                    ProgressBar::new(heart_ratio)
-                        .text(format!(
-                            "💖 {}/{}",
-                            hud_state.heart_hp, hud_state.heart_max_hp
-                        ))
-                        .desired_width(105.0),
-                );
-
-                // Punch-hole camera safety gap in the center
-                ui.add_space(24.0);
-
-                // Right: Controls, Floor Dropdown, Wave, Infamy, Chrono & Save
+                // Right-aligned quick action buttons
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if ui
                         .add(touch_btn("💾"))
@@ -201,7 +215,7 @@ pub fn hud_status_bar_system(
                     }
 
                     let chrono_icon = if hud_state.show_chrono_window {
-                        "⏳[X]"
+                        "⏳X"
                     } else {
                         "⏳"
                     };
@@ -221,11 +235,41 @@ pub fn hud_status_bar_system(
                     {
                         hud_state.is_paused = !hud_state.is_paused;
                     }
+                });
+            });
 
+            ui.add_space(2.0);
+
+            // Row 2: Vitals Gauges (Mana, Heart) | Floor Dropdown & Tick
+            ui.horizontal(|ui| {
+                // Mana Bar
+                let mana_ratio = if hud_state.max_mana > 0 {
+                    (hud_state.mana as f32 / hud_state.max_mana as f32).clamp(0.0, 1.0)
+                } else {
+                    0.0
+                };
+                ui.add(
+                    ProgressBar::new(mana_ratio)
+                        .text(format!("💧 {}", hud_state.mana))
+                        .desired_width(75.0),
+                );
+
+                // Heart Bar
+                let heart_ratio = if hud_state.heart_max_hp > 0 {
+                    (hud_state.heart_hp as f32 / hud_state.heart_max_hp as f32).clamp(0.0, 1.0)
+                } else {
+                    0.0
+                };
+                ui.add(
+                    ProgressBar::new(heart_ratio)
+                        .text(format!("❤️ {}", hud_state.heart_hp))
+                        .desired_width(75.0),
+                );
+
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     let tick = simulation.current_tick().0;
-                    ui.label(RichText::new(format!("T:{tick}")).monospace().strong());
+                    ui.label(RichText::new(format!("T:{tick}")).monospace().size(11.0));
 
-                    // Floor Selector Dropdown
                     egui::ComboBox::from_id_salt("floor_dropdown")
                         .selected_text(format!("Étage {} ▾", active_floor.0 .0))
                         .show_ui(ui, |ui| {
@@ -245,30 +289,6 @@ pub fn hud_status_bar_system(
                                 "Étage 2 : Crypte du Cœur",
                             );
                         });
-
-                    // Wave & Phase Pill
-                    let (phase_str, phase_color) = match hud_state.wave_phase {
-                        WavePhase::Preparation => ("PRÉP", Color32::from_rgb(0x5A, 0xC5, 0x4F)),
-                        WavePhase::Incursion => ("INCURSION", Color32::from_rgb(0xFF, 0x44, 0x44)),
-                        WavePhase::Debriefing => ("DÉBRIEF", Color32::from_rgb(0xF4, 0xB4, 0x1B)),
-                        WavePhase::Victory => ("VICTOIRE", Color32::from_rgb(0x00, 0xE5, 0xFF)),
-                        WavePhase::Defeat => ("DÉFAITE", Color32::from_rgb(0xFF, 0x00, 0x00)),
-                    };
-                    ui.label(
-                        RichText::new(format!(
-                            "Vague {}/{} [{}]",
-                            hud_state.wave, hud_state.max_waves, phase_str
-                        ))
-                        .color(phase_color)
-                        .strong(),
-                    );
-
-                    // Infamy
-                    ui.label(
-                        RichText::new(format!("🔥 {}", hud_state.infamy))
-                            .color(Color32::from_rgb(0xF4, 0xB4, 0x1B))
-                            .strong(),
-                    );
                 });
             });
         });
@@ -283,50 +303,60 @@ pub fn hud_action_bar_system(
     mut hud_state: ResMut<HudState>,
     mut simulation: ResMut<WorldSimulation>,
     _active_floor: Res<ActiveFloor>,
+    tool_icons: Option<Res<crate::render::ToolIconsResource>>,
 ) {
+    let tool_tex = tool_icons.as_ref().map(|icons| {
+        (
+            contexts.add_image(icons.wall.clone()),
+            contexts.add_image(icons.spikes.clone()),
+            contexts.add_image(icons.acid.clone()),
+            contexts.add_image(icons.skeleton.clone()),
+            contexts.add_image(icons.zombie.clone()),
+        )
+    });
     let ctx = contexts.ctx_mut();
 
     egui::TopBottomPanel::bottom("action_bar")
         .frame(
             egui::Frame::side_top_panel(&ctx.style()).inner_margin(egui::Margin {
-                left: 10.0,
-                right: 10.0,
-                top: 6.0,
-                bottom: 10.0,
+                left: 16.0,
+                right: 16.0,
+                top: 8.0,
+                bottom: 24.0, // Safe padding for rounded display corners and Android gesture bar
             }),
         )
         .show(ctx, |ui| {
             // Line 1: Contextual Info Banner for Selected Placement Tool
             let (title, cost_str, desc) = match hud_state.selected_tool {
                 PlacementTool::Wall => (
-                    "🧱 Mur de Pierre",
+                    "Mur de Pierre",
                     "10 💧",
-                    "Bloque le passage et dévie la trajectoire des héros.",
+                    "Bloque le passage et force un détour.",
                 ),
                 PlacementTool::Spikes => (
-                    "⚡ Piège à Piques",
+                    "Piège à Piques",
                     "15 💧",
-                    "Inflige 25 dégâts physiques aux aventuriers au franchissement.",
+                    "Inflige 25 dégâts physiques aux intrus.",
                 ),
                 PlacementTool::Acid => (
-                    "🧪 Fosse d'Acide",
+                    "Fosse d'Acide",
                     "25 💧",
                     "Dégâts continus et dégradation d'armure.",
                 ),
                 PlacementTool::Skeleton => (
-                    "💀 Squelette Guerrier",
+                    "Squelette Guerrier",
                     "20 💧",
                     "Gardien de base patrouillant le secteur.",
                 ),
                 PlacementTool::Zombie => (
-                    "🧟 Zombie Pestilentiel",
+                    "Zombie Pestilentiel",
                     "35 💧",
-                    "Colosse résistant qui diffuse terreur et effroi.",
+                    "Colosse résistant qui diffuse l'effroi.",
                 ),
                 PlacementTool::None => (
-                    "ℹ Mode Tactique",
+                    "Mode Tactique",
                     "-",
-                    "Sélectionnez un outil pour le poser, ou touchez une case pour l'inspecter.",
+                    "Touchez un outil pour le poser, ou une case pour l'inspecter.",
                 ),
             };
 
@@ -334,75 +364,132 @@ pub fn hud_action_bar_system(
                 ui.label(
                     RichText::new(title)
                         .color(Color32::from_rgb(0xFF, 0xDD, 0x55))
+                        .size(13.0)
                         .strong(),
                 );
                 if hud_state.selected_tool != PlacementTool::None {
                     ui.label(
-                        RichText::new(format!("(Coût: {cost_str})"))
+                        RichText::new(format!("• Coût: {cost_str}"))
                             .color(Color32::from_rgb(0x41, 0x7E, 0xBD))
+                            .size(12.0)
                             .strong(),
                     );
                 }
-                ui.label(
-                    RichText::new(format!("— {desc}"))
-                        .color(Color32::from_rgb(0xCF, 0xCF, 0xCF))
-                        .italics(),
-                );
             });
+
+            ui.label(
+                RichText::new(desc)
+                    .color(Color32::from_rgb(0xCF, 0xCF, 0xCF))
+                    .size(11.0),
+            );
 
             ui.add_space(4.0);
 
-            // Line 2: Scrollable Tools on the Left + Fixed Action Button on the Right
+            // Line 2: Scrollable Tools (Left) + Pinned Action Button (Right)
+            let avail_w = ui.available_width();
+            let action_btn_w = 80.0;
+            let spacing = 8.0;
+            let tools_w = (avail_w - action_btn_w - spacing).max(120.0);
+
             ui.horizontal(|ui| {
-                let avail_w = ui.available_width();
-                let right_btn_w = 96.0;
-                let scroll_w = (avail_w - right_btn_w - 8.0).max(120.0);
+                // Left: Single-Row Horizontal Scroll Area with strict max_width
+                ui.allocate_ui_with_layout(
+                    egui::vec2(tools_w, 48.0),
+                    egui::Layout::left_to_right(egui::Align::Center),
+                    |ui| {
+                        egui::ScrollArea::horizontal()
+                            .max_width(tools_w)
+                            .auto_shrink([false, false])
+                            .show(ui, |ui| {
+                                ui.horizontal(|ui| {
+                                    let tool_data = [
+                                        (
+                                            PlacementTool::Wall,
+                                            "10💧",
+                                            tool_tex.as_ref().map(|t| t.0),
+                                        ),
+                                        (
+                                            PlacementTool::Spikes,
+                                            "15💧",
+                                            tool_tex.as_ref().map(|t| t.1),
+                                        ),
+                                        (
+                                            PlacementTool::Acid,
+                                            "25💧",
+                                            tool_tex.as_ref().map(|t| t.2),
+                                        ),
+                                        (
+                                            PlacementTool::Skeleton,
+                                            "20💧",
+                                            tool_tex.as_ref().map(|t| t.3),
+                                        ),
+                                        (
+                                            PlacementTool::Zombie,
+                                            "35💧",
+                                            tool_tex.as_ref().map(|t| t.4),
+                                        ),
+                                    ];
 
-                // Left: Single-Row Horizontal Scroll Area
-                ui.allocate_ui(egui::vec2(scroll_w, 48.0), |ui| {
-                    egui::ScrollArea::horizontal()
-                        .auto_shrink([false, false])
-                        .show(ui, |ui| {
-                            ui.horizontal(|ui| {
-                                let tools = [
-                                    (PlacementTool::Wall, "🧱\n10💧"),
-                                    (PlacementTool::Spikes, "⚡\n15💧"),
-                                    (PlacementTool::Acid, "🧪\n25💧"),
-                                    (PlacementTool::Skeleton, "💀\n20💧"),
-                                    (PlacementTool::Zombie, "🧟\n35💧"),
-                                ];
+                                    for (tool, cost, opt_tex) in tool_data {
+                                        let is_active = hud_state.selected_tool == tool;
 
-                                for (tool, label) in tools {
-                                    let is_active = hud_state.selected_tool == tool;
-                                    let text = if is_active {
-                                        RichText::new(label).color(Color32::YELLOW).strong()
-                                    } else {
-                                        RichText::new(label).color(Color32::WHITE)
-                                    };
+                                        let btn_response = if let Some(tex_id) = opt_tex {
+                                            let img =
+                                                egui::Image::new(egui::load::SizedTexture::new(
+                                                    tex_id,
+                                                    egui::vec2(24.0, 24.0),
+                                                ));
+                                            let text_color = if is_active {
+                                                Color32::YELLOW
+                                            } else {
+                                                Color32::WHITE
+                                            };
+                                            let btn = egui::Button::image_and_text(
+                                                img,
+                                                RichText::new(cost).color(text_color).size(11.0),
+                                            )
+                                            .min_size(egui::vec2(52.0, 44.0))
+                                            .selected(is_active);
+                                            ui.add(btn)
+                                        } else {
+                                            let btn = egui::Button::new(
+                                                RichText::new(cost)
+                                                    .color(if is_active {
+                                                        Color32::YELLOW
+                                                    } else {
+                                                        Color32::WHITE
+                                                    })
+                                                    .size(12.0),
+                                            )
+                                            .min_size(egui::vec2(44.0, 44.0))
+                                            .selected(is_active);
+                                            ui.add(btn)
+                                        };
 
-                                    let btn = egui::Button::new(text)
-                                        .min_size(egui::vec2(44.0, 44.0))
-                                        .selected(is_active);
-
-                                    if ui.add(btn).clicked() {
-                                        hud_state.selected_tool =
-                                            if is_active { PlacementTool::None } else { tool };
+                                        if btn_response.clicked() {
+                                            hud_state.selected_tool =
+                                                if is_active { PlacementTool::None } else { tool };
+                                        }
                                     }
-                                }
+                                });
                             });
-                        });
-                });
+                    },
+                );
 
-                // Right: Fixed Action / Attack Button pinned to bottom-right
-                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                    match hud_state.wave_phase {
+                // Right: Pinned Action / Attack Button
+                ui.allocate_ui_with_layout(
+                    egui::vec2(action_btn_w, 48.0),
+                    egui::Layout::centered_and_justified(egui::Direction::LeftToRight),
+                    |ui| match hud_state.wave_phase {
                         WavePhase::Preparation => {
                             let btn = egui::Button::new(
                                 RichText::new("⚔ ASSAUT")
                                     .color(Color32::from_rgb(0xFF, 0xDD, 0x55))
+                                    .size(12.0)
                                     .strong(),
                             )
-                            .min_size(egui::vec2(right_btn_w, 44.0));
+                            .fill(Color32::from_rgb(0x60, 0x1A, 0x1A))
+                            .min_size(egui::vec2(action_btn_w, 44.0));
                             if ui.add(btn).clicked() {
                                 simulation.world_mut().start_incursion();
                             }
@@ -411,27 +498,31 @@ pub fn hud_action_bar_system(
                             let btn = egui::Button::new(
                                 RichText::new("⏭ STEP")
                                     .color(Color32::from_rgb(0x55, 0xFF, 0x55))
+                                    .size(12.0)
                                     .strong(),
                             )
-                            .min_size(egui::vec2(right_btn_w, 44.0));
+                            .fill(Color32::from_rgb(0x1B, 0x4D, 0x2E))
+                            .min_size(egui::vec2(action_btn_w, 44.0));
                             if ui.add(btn).clicked() {
                                 simulation.step();
                             }
                         }
                         WavePhase::Debriefing => {
                             let btn = egui::Button::new(
-                                RichText::new("➡ SUIVANT")
+                                RichText::new("➡ VAGUE")
                                     .color(Color32::from_rgb(0x55, 0xFF, 0x55))
+                                    .size(12.0)
                                     .strong(),
                             )
-                            .min_size(egui::vec2(right_btn_w, 44.0));
+                            .fill(Color32::from_rgb(0x1B, 0x4D, 0x2E))
+                            .min_size(egui::vec2(action_btn_w, 44.0));
                             if ui.add(btn).clicked() {
                                 simulation.world_mut().campaign_mut().advance_to_next_wave();
                             }
                         }
                         WavePhase::Victory | WavePhase::Defeat => {}
-                    }
-                });
+                    },
+                );
             });
         });
 }

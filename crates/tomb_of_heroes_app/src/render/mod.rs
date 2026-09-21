@@ -111,6 +111,16 @@ pub struct GameLogoResource {
     pub texture: Handle<Image>,
 }
 
+/// Shared handles to pixel-art tool icon textures for mobile tactile HUD.
+#[derive(Resource, Debug, Clone)]
+pub struct ToolIconsResource {
+    pub wall: Handle<Image>,
+    pub spikes: Handle<Image>,
+    pub acid: Handle<Image>,
+    pub skeleton: Handle<Image>,
+    pub zombie: Handle<Image>,
+}
+
 /// Resource designating the active floor visualized by the player.
 #[derive(Resource, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ActiveFloor(pub FloorId);
@@ -281,6 +291,16 @@ pub fn setup_tilemap_system(
     commands.insert_resource(GameLogoResource {
         texture: logo_handle,
     });
+
+    // Register sharp pixel-art tool icons for mobile tactile action bar
+    let tool_icons = ToolIconsResource {
+        wall: images.add(crate::asset_gen::extract_tile_image(1, 0)),
+        spikes: images.add(crate::asset_gen::extract_tile_image(4, 2)),
+        acid: images.add(crate::asset_gen::extract_tile_image(4, 0)),
+        skeleton: images.add(crate::asset_gen::extract_tile_image(0, 2)),
+        zombie: images.add(crate::asset_gen::extract_tile_image(1, 2)),
+    };
+    commands.insert_resource(tool_icons);
 
     // Spawn tiles for active floor
     spawn_floor_tiles(&mut commands, &atlas, active_floor.0, &topology.dungeon);

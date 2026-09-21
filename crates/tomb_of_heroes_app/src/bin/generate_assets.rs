@@ -48,6 +48,29 @@ fn main() {
                 icon_32.save_with_format("assets/branding/icon_32.png", image::ImageFormat::Png);
 
             println!("Successfully generated app icons (256, 128, 64, 32) in assets/branding/");
+
+            // Generate Android mipmap launcher icons
+            let mipmap_targets = [
+                ("mipmap-mdpi", 48),
+                ("mipmap-hdpi", 72),
+                ("mipmap-xhdpi", 96),
+                ("mipmap-xxhdpi", 144),
+                ("mipmap-xxxhdpi", 192),
+            ];
+
+            let res_bases = ["crates/tomb_of_heroes_app/res", "res"];
+            for base in res_bases {
+                for (folder, size) in mipmap_targets {
+                    let dir_path = format!("{base}/{folder}");
+                    let _ = fs::create_dir_all(&dir_path);
+                    let resized = img.resize(size, size, image::imageops::FilterType::Lanczos3);
+                    let icon_path = format!("{dir_path}/ic_launcher.png");
+                    let _ = resized.save_with_format(&icon_path, image::ImageFormat::Png);
+                    let round_path = format!("{dir_path}/ic_launcher_round.png");
+                    let _ = resized.save_with_format(&round_path, image::ImageFormat::Png);
+                }
+            }
+            println!("Successfully generated Android mipmap launcher icons in res/");
         }
     }
 }
