@@ -131,15 +131,25 @@ impl Default for NecroConfig {
     }
 }
 
-/// Adventurer retreat triggering thresholds.
+/// Adventurer retreat triggering thresholds and countermeasures.
 ///
-/// Specified in `SPEC-REQ-INTEL-001`.
+/// Specified in `SPEC-REQ-INTEL-001` and `SPEC-REQ-INTEL-002`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RetreatConfig {
     /// Critical individual health threshold triggering retreat (25.00% = 2_500 BPS).
     pub hp_threshold: BasisPoints,
     /// Squad casualty ratio threshold triggering retreat (50.00% = 5_000 BPS).
     pub casualty_threshold: BasisPoints,
+    /// Flee movement speed bonus in basis points (+15.00% = 1_500 BPS).
+    pub flee_speed_bonus_bps: BasisPoints,
+    /// Terror points threshold for Blind Panic triggering retreat (8_500 points).
+    pub blind_panic_threshold: u32,
+    /// Portcullis forcing duration in ticks (100 ticks = 5.0 s).
+    pub portcullis_force_ticks: u32,
+    /// Dimensional anchor effect radius in Chebyshev distance (6 tiles).
+    pub dimensional_anchor_radius: u32,
+    /// Dimensional anchor magic inhibition rate in basis points (100.00% = 10_000 BPS).
+    pub dimensional_anchor_inhibition_bps: BasisPoints,
 }
 
 impl Default for RetreatConfig {
@@ -147,6 +157,52 @@ impl Default for RetreatConfig {
         Self {
             hp_threshold: BasisPoints(2_500),
             casualty_threshold: BasisPoints(5_000),
+            flee_speed_bonus_bps: BasisPoints(1_500),
+            blind_panic_threshold: 8_500,
+            portcullis_force_ticks: 100,
+            dimensional_anchor_radius: 6,
+            dimensional_anchor_inhibition_bps: BasisPoints(10_000),
+        }
+    }
+}
+
+/// Guild intelligence register, dissipation, and veterancy parameters.
+///
+/// Specified in `SPEC-REQ-INTEL-003` and `SPEC-REQ-INTEL-004`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct IntelConfig {
+    /// Initial intelligence confidence upon hero escape (10_000 BPS = 100.00%).
+    pub initial_confidence_bps: u32,
+    /// Dissipation rate per dungeon day in basis points (100 BPS / day).
+    pub dissipation_rate_per_day_bps: u32,
+    /// Duration of one dungeon day in simulation ticks (1_200 s * 20 Hz = 24_000 ticks).
+    pub ticks_per_day: u64,
+    /// Confidence threshold triggering false confidence bias penalty (5_000 BPS).
+    pub false_confidence_threshold_bps: u32,
+    /// Detection malus applied when trap altered and confidence high (-3_000 BPS).
+    pub false_confidence_malus_bps: BasisPoints,
+    /// Maximum capacity of the guild veteran roster (32 profiles).
+    pub max_roster_capacity: usize,
+    /// Health threshold for pyrophobia trait acquisition (< 1_000 BPS = 10.00%).
+    pub pyrophobia_hp_threshold_bps: BasisPoints,
+    /// Mechanical traps survived threshold for trap paranoia (> 3 traps).
+    pub trap_paranoia_threshold: u32,
+    /// Rank threshold for honorable retirement (Rank 5).
+    pub honorable_retirement_rank: u8,
+}
+
+impl Default for IntelConfig {
+    fn default() -> Self {
+        Self {
+            initial_confidence_bps: 10_000,
+            dissipation_rate_per_day_bps: 100,
+            ticks_per_day: 24_000,
+            false_confidence_threshold_bps: 5_000,
+            false_confidence_malus_bps: BasisPoints(3_000),
+            max_roster_capacity: 32,
+            pyrophobia_hp_threshold_bps: BasisPoints(1_000),
+            trap_paranoia_threshold: 3,
+            honorable_retirement_rank: 5,
         }
     }
 }
@@ -267,6 +323,8 @@ pub struct GameConfig {
     pub viewport: ViewportConfig,
     /// Discrete 2.5D topology and navigation configuration.
     pub topology: TopologyConfig,
+    /// Guild intelligence, dissipation, and veterancy configuration.
+    pub intel: IntelConfig,
 }
 
 impl Default for GameConfig {
@@ -281,6 +339,7 @@ impl Default for GameConfig {
             chrono: ChronoConfig::default(),
             viewport: ViewportConfig::default(),
             topology: TopologyConfig::default(),
+            intel: IntelConfig::default(),
         }
     }
 }
