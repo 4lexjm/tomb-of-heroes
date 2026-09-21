@@ -15,6 +15,10 @@ crate-type = ["lib", "cdylib"]
 name = "tomb_of_heroes_app"
 path = "src/main.rs"
 
+[[bin]]
+name = "generate_assets"
+path = "src/bin/generate_assets.rs"
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Dépendances partagées (toutes plateformes)
 # bevy est défini séparément par plateforme dans les sections [target.cfg(...)]
@@ -30,6 +34,8 @@ serde_json = { workspace = true }
 zstd = { workspace = true }
 rand_xoshiro = { workspace = true }
 uuid = { workspace = true }
+blake3 = { version = "1.8", features = ["pure"] }
+image = { version = "0.25", default-features = false, features = ["png"] }
 
 # Features Bevy communes à toutes les plateformes.
 # bevy_egui résout déjà bevy — cette entrée ajoute les features de rendu
@@ -56,11 +62,10 @@ bevy = { version = "0.15", default-features = false, features = [
 [target.'cfg(target_os = "linux")'.dependencies]
 bevy = { version = "0.15", default-features = false, features = ["x11"] }
 
-# Android : activity backend + shared C++ runtime
+# Android : activity backend
 [target.'cfg(target_os = "android")'.dependencies]
 bevy = { version = "0.15", default-features = false, features = [
     "android-native-activity",
-    "android_shared_stdcxx",
 ] }
 
 # iOS : aucune feature supplémentaire (UIKit géré par winit nativement)
@@ -115,3 +120,15 @@ path = "tests/test_fixed_tick_accumulator.rs"
 [[test]]
 name = "test_bevy_app_headless_step"
 path = "tests/test_bevy_app_headless_step.rs"
+
+[[test]]
+name = "test_frontend_coordinates_and_scaling"
+path = "tests/test_frontend_coordinates_and_scaling.rs"
+
+[[test]]
+name = "test_frontend_render_sync_and_assets"
+path = "tests/test_frontend_render_sync_and_assets.rs"
+
+[[test]]
+name = "test_frontend_hud_and_touch_targets"
+path = "tests/test_frontend_hud_and_touch_targets.rs"

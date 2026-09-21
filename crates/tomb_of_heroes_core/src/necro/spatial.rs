@@ -202,4 +202,11 @@ impl CorpseRegistry {
     pub fn is_empty(&self) -> bool {
         self.corpses.is_empty()
     }
+
+    /// Returns an iterator yielding `(LogicId, GridCoord, &Corpse)` for all tracked corpses.
+    pub fn iter(&self) -> impl Iterator<Item = (LogicId, GridCoord, &Corpse)> {
+        self.corpses
+            .iter()
+            .map(|(&id, (coord, corpse))| (id, *coord, corpse))
+    }
 }
