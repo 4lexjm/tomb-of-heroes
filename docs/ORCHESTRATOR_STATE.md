@@ -1,6 +1,6 @@
 # Journal d'Orchestration « Tomb of Heroes »
 
-Dernière mise à jour : Intégration Jalon 2 (F09) & Lancement Jalon 3 (F10)
+Dernière mise à jour : **Jalon 3 (F10) complété — Toutes les fonctionnalités du DAG intégrées**
 
 ## 1. Vue globale du DAG des fonctionnalités
 
@@ -15,7 +15,7 @@ Dernière mise à jour : Intégration Jalon 2 (F09) & Lancement Jalon 3 (F10)
 | **F07** | Fuite, Guilde & Vétérance | Branche B (Nécromancie) | F04 | ✅ Terminé | `dabd5a2` |
 | **F08** | Rembobinage & ChronoMemory | Branche C (Chronomancie) | F05 | ✅ Terminé | `f0dde64` |
 | **F09** | SaveEnvelope, Zstd & Persistance | Jalon 2 (Persistance) | F06, F07, F08 | ✅ Terminé | `f09985a` |
-| **F10** | Application Bevy 0.15 & UI Viewport | Jalon 3 (Présentation) | F09 | 🔄 En cours | - |
+| **F10** | Application Bevy 0.15 & UI Viewport | Jalon 3 (Présentation) | F09 | ✅ Terminé | `fa8cde1` |
 
 ---
 
@@ -23,14 +23,26 @@ Dernière mise à jour : Intégration Jalon 2 (F09) & Lancement Jalon 3 (F10)
 
 | Worktree Path | Branche | Sous-agent | Tâche | Statut |
 | :--- | :--- | :--- | :--- | :--- |
-| `.worktrees/F10-app-bevy-ui` | `feature/F10-app-bevy-ui` | `feature_engineer` | F10 : Application Bevy 0.15 & UI Viewport | 🚀 En cours |
+| *(aucun)* | `main` | Orchestrateur | **DAG entièrement intégré** | ✅ Complet |
 
 ---
 
 ## 3. Matrice des tests d'intégration globaux
 
-- Dernier run workspace : `cargo test --workspace` sur `main` (`f09985a`)
-- Statut : ✅ **102 tests unitaires et d'intégration passés avec succès**, 0 avertissement clippy (`-D warnings`), `cargo fmt --check` validé.
+- Dernier run workspace : `cargo test --workspace` sur `main` (`fa8cde1`)
+- Statut : ✅ **113 tests unitaires et d'intégration passés avec succès**, 0 avertissement clippy (`-D warnings`), `cargo fmt --check` validé.
+
+### Répartition par jalon
+
+| Jalon | Suites de tests | Modules couverts |
+| :--- | :--- | :--- |
+| M1 — Architecture | `m1_arch/` (12 tests) | `math`, `config`, `time`, `id`, `rng`, `hash`, `world` |
+| M2 — Topologie | `m2_topo/` (18 tests) | `topology/coordinates`, `links`, `grid`, `astar`, `shadowcasting`, `knowledge`, `frontier` |
+| M3 — Nécromancie | `m3_necro/` (22 tests) | `necro/corpse`, `terror`, `necromancy`, `spatial` |
+| M4 — Renseignement | `m4_intel/` (19 tests) | `intel/retreat`, `guild`, `veterancy` |
+| M5 — Chronomancie | `m5_chrono/` (16 tests) | `chrono/command`, `journal`, `snapshot`, `rewind`, `memory` |
+| M6 — Sauvegarde | `m6_save/` (10 tests) | `save/header`, `envelope`, `armor`, `error` |
+| App — Viewport/Sim | `tomb_of_heroes_app/tests/` (11 tests) | `viewport`, `simulation`, `plugin` |
 
 ---
 
@@ -49,3 +61,8 @@ Dernière mise à jour : Intégration Jalon 2 (F09) & Lancement Jalon 3 (F10)
 ### Intégration du Jalon 2 (F09) :
 1. **Sérialisation déterministe de `CorpseRegistry` :** Correction de la sérialisation des clés non-chaînes (`GridCoord`) vers JSON par vectorisation ordonnée `(GridCoord, Vec<LogicId>)`.
 2. **Contrôle anti-régression :** 102/102 tests réussis dans le workspace (`cargo test --workspace`).
+
+### Intégration du Jalon 3 (F10) :
+1. **Architecture duale `lib` + `bin` :** `tomb_of_heroes_app` restructuré avec `src/lib.rs` (API publique, `build_app()`) et `src/main.rs` (point d'entrée binaire), permettant les tests d'intégration headless `cargo test -p tomb_of_heroes_app`.
+2. **Protection division-par-zéro viewport :** `compute_pixel_perfect_scale` retourne `1` si dimensions nulles, jamais de panique.
+3. **Contrôle anti-régression :** 113/113 tests réussis dans le workspace (`cargo test --workspace`).
