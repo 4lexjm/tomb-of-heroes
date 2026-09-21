@@ -9,11 +9,87 @@ description = "Bevy 0.15 graphical application and egui interface for Tomb of He
 [lib]
 name = "tomb_of_heroes_app"
 path = "src/lib.rs"
+crate-type = ["lib", "cdylib"]
 
 [[bin]]
 name = "tomb_of_heroes_app"
 path = "src/main.rs"
 
+# ──────────────────────────────────────────────────────────────────────────────
+# Dépendances partagées (toutes plateformes)
+# bevy est défini séparément par plateforme dans les sections [target.cfg(...)]
+# car ses features diffèrent entre desktop (x11) et mobile (android-native-activity).
+# bevy_egui est déclaré ici sans features spéciales et s'adapte automatiquement
+# via ses propres dépendances transitives sur bevy.
+# ──────────────────────────────────────────────────────────────────────────────
+[dependencies]
+tomb_of_heroes_core = { path = "../tomb_of_heroes_core" }
+bevy_egui = "0.31"
+serde = { workspace = true }
+serde_json = { workspace = true }
+zstd = { workspace = true }
+rand_xoshiro = { workspace = true }
+uuid = { workspace = true }
+
+# Features Bevy communes à toutes les plateformes.
+# bevy_egui résout déjà bevy — cette entrée ajoute les features de rendu
+# partagées. Les features spécifiques à chaque OS sont dans les sections ci-dessous.
+bevy = { version = "0.15", default-features = false, features = [
+    "bevy_asset",
+    "bevy_winit",
+    "bevy_render",
+    "bevy_core_pipeline",
+    "bevy_sprite",
+    "bevy_text",
+    "bevy_ui",
+    "bevy_window",
+    "png",
+] }
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Features additionnelles conditionnelles par plateforme cible
+# Cargo unifie automatiquement les features d'un même crate entre les sections
+# [dependencies] et [target.'cfg(...)'.dependencies].
+# ──────────────────────────────────────────────────────────────────────────────
+
+# Linux desktop : X11 windowing backend
+[target.'cfg(target_os = "linux")'.dependencies]
+bevy = { version = "0.15", default-features = false, features = ["x11"] }
+
+# Android : activity backend + shared C++ runtime
+[target.'cfg(target_os = "android")'.dependencies]
+bevy = { version = "0.15", default-features = false, features = [
+    "android-native-activity",
+    "android_shared_stdcxx",
+] }
+
+# iOS : aucune feature supplémentaire (UIKit géré par winit nativement)
+# [target.'cfg(target_os = "ios")'.dependencies]
+# bevy = { version = "0.15", default-features = false, features = [] }
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Métadonnées Android pour cargo-apk
+# ──────────────────────────────────────────────────────────────────────────────
+[package.metadata.android]
+package = "com.tombofheroes.tactical"
+label = "Tomb of Heroes"
+build_targets = ["aarch64-linux-android"]
+
+[package.metadata.android.sdk]
+min_sdk_version = 23
+target_sdk_version = 34
+compile_sdk_version = 34
+
+[[package.metadata.android.uses_permission]]
+name = "android.permission.VIBRATE"
+
+# ──────────────────────────────────────────────────────────────────────────────
+[lints]
+workspace = true
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Suites de tests d'intégration headless
+# ──────────────────────────────────────────────────────────────────────────────
 [[test]]
 name = "test_viewport_integer_scale_calculation"
 path = "tests/test_viewport_integer_scale_calculation.rs"
@@ -33,16 +109,3 @@ path = "tests/test_fixed_tick_accumulator.rs"
 [[test]]
 name = "test_bevy_app_headless_step"
 path = "tests/test_bevy_app_headless_step.rs"
-
-[dependencies]
-tomb_of_heroes_core = { path = "../tomb_of_heroes_core" }
-bevy = { workspace = true }
-bevy_egui = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
-zstd = { workspace = true }
-rand_xoshiro = { workspace = true }
-uuid = { workspace = true }
-
-[lints]
-workspace = true

@@ -23,19 +23,8 @@ uuid = { version = "1.10", features = ["v4", "serde"] }
 crc32fast = "1.4"
 base64 = "0.21"
 
-# Moteur Bevy 0.15 et intégration UI (réservé au conteneur applicatif app)
-bevy = { version = "0.15", default-features = false, features = [
-    "bevy_asset",
-    "bevy_winit",
-    "bevy_render",
-    "bevy_core_pipeline",
-    "bevy_sprite",
-    "bevy_text",
-    "bevy_ui",
-    "x11",
-    "png",
-] }
-bevy_egui = "0.31"
+# Note: bevy et bevy_egui sont définis dans tomb_of_heroes_app/Cargo.toml
+# avec des features conditionnelles par plateforme (x11/android/ios).
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

@@ -15,11 +15,16 @@ pub use viewport::{
     LOGICAL_WIDTH_MIN, LOGICAL_WIDTH_REF,
 };
 
-/// Builds and configures the default Bevy application instance.
+/// Builds and configures the Bevy application instance.
+///
+/// In test contexts, pair with `MinimalPlugins` directly; this function
+/// uses `DefaultPlugins` to enable rendering, windowing, and input on device.
+/// For headless integration tests, use `App::new().add_plugins(MinimalPlugins)`
+/// followed by `add_plugins(TombOfHeroesAppPlugin)` directly.
 #[must_use]
 pub fn build_app() -> bevy::app::App {
     let mut app = bevy::app::App::new();
-    app.add_plugins(bevy::MinimalPlugins);
+    app.add_plugins(bevy::DefaultPlugins);
     app.add_plugins(TombOfHeroesAppPlugin);
     app
 }

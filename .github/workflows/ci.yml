@@ -1,16 +1,19 @@
-name: CI Engine Validation
+name: CI & Mobile Artifacts Build
 
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
-  RUSTFLAGS: "-D warnings"
 
 jobs:
+  # ────────────────────────────────────────────────────────────────────────────
+  # 1. Validation de la qualité, lints et tests headless
+  # ────────────────────────────────────────────────────────────────────────────
   validate-specs-and-core:
     name: Lint, Build & Headless Test (Linux x86_64)
     runs-on: ubuntu-latest
@@ -35,15 +38,117 @@ jobs:
       - name: Run Clippy (Strict Zero-Warning)
         run: cargo clippy --workspace --all-targets -- -D warnings
 
-      - name: Run Tests (Headless)
+      - name: Run Tests (113 Headless Specs)
         run: cargo test --workspace
 
-      - name: Validate Cross-Compilation (iOS Core target)
-        run: |
-          rustup target add aarch64-apple-ios
-          SDKROOT=/tmp CRATE_CC_NO_DEFAULTS=1 CC_aarch64_apple_ios=gcc AR_aarch64_apple_ios=ar cargo check --target aarch64-apple-ios --package tomb_of_heroes_core
+  # ────────────────────────────────────────────────────────────────────────────
+  # 2. Construction de l'artefact Android (.apk)
+  # ────────────────────────────────────────────────────────────────────────────
+  build-android-apk:
+    name: Build Android APK (ARM64)
+    needs: validate-specs-and-core
+    runs-on: ubuntu-latest
 
-      - name: Validate Cross-Compilation (Android Core target)
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Locate or Install Android NDK
         run: |
-          rustup target add aarch64-linux-android
-          CRATE_CC_NO_DEFAULTS=1 CC_aarch64_linux_android=gcc AR_aarch64_linux_android=ar cargo check --target aarch64-linux-android --package tomb_of_heroes_core
+          NDK_DIR=$(find "${ANDROID_HOME}/ndk" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | sort -V | tail -n 1)
+          if [ -z "$NDK_DIR" ]; then
+            echo "Installing Android NDK r26b via sdkmanager..."
+            echo "y" | ${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager --install "ndk;26.1.10909125"
+            NDK_DIR="${ANDROID_HOME}/ndk/26.1.10909125"
+          fi
+          echo "Using Android NDK: $NDK_DIR"
+          echo "ANDROID_NDK_ROOT=$NDK_DIR" >> $GITHUB_ENV
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+
+      - name: Install cargo-apk
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-apk
+
+      - name: Rust Cache (Android target)
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+          key: "android-aarch64"
+
+      - name: Build Release APK
+        run: cargo apk build --package tomb_of_heroes_app --release
+
+      - name: Upload Android APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: tomb-of-heroes-android-apk
+          path: target/release/apk/tomb_of_heroes_app.apk
+          if-no-files-found: error
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # 3. Construction des artefacts iOS (Simulator & Device)
+  # ────────────────────────────────────────────────────────────────────────────
+  build-ios-artifacts:
+    name: Build iOS Artifacts (Simulator & Device)
+    needs: validate-specs-and-core
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain (iOS targets)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios, aarch64-apple-ios-sim
+
+      - name: Rust Cache (iOS targets)
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+          key: "ios-aarch64"
+
+      - name: Build for iOS Simulator (aarch64-apple-ios-sim)
+        run: cargo build --package tomb_of_heroes_app --target aarch64-apple-ios-sim --release
+
+      - name: Package iOS Simulator App
+        run: |
+          mkdir -p build/ios/simulator/TombOfHeroes.app
+          cp target/aarch64-apple-ios-sim/release/tomb_of_heroes_app build/ios/simulator/TombOfHeroes.app/TombOfHeroes
+          cp packaging/ios/Info.plist build/ios/simulator/TombOfHeroes.app/Info.plist
+          cd build/ios/simulator && zip -r ../../../tomb-of-heroes-ios-simulator.app.zip TombOfHeroes.app
+
+      - name: Build for iOS Device (aarch64-apple-ios)
+        run: cargo build --package tomb_of_heroes_app --target aarch64-apple-ios --release
+
+      - name: Package iOS Device Unsigned IPA
+        run: |
+          mkdir -p build/ios/device/Payload/TombOfHeroes.app
+          cp target/aarch64-apple-ios/release/tomb_of_heroes_app build/ios/device/Payload/TombOfHeroes.app/TombOfHeroes
+          cp packaging/ios/Info.plist build/ios/device/Payload/TombOfHeroes.app/Info.plist
+          cd build/ios/device && zip -r ../../../tomb-of-heroes-ios-device-unsigned.ipa Payload
+
+      - name: Upload iOS Simulator App (.zip)
+        uses: actions/upload-artifact@v4
+        with:
+          name: tomb-of-heroes-ios-simulator-app
+          path: tomb-of-heroes-ios-simulator.app.zip
+          if-no-files-found: error
+
+      - name: Upload iOS Device Unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: tomb-of-heroes-ios-device-unsigned-ipa
+          path: tomb-of-heroes-ios-device-unsigned.ipa
+          if-no-files-found: error
