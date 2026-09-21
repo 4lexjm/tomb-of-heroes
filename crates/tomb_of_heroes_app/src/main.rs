@@ -1,10 +1,9 @@
-//! # Tomb of Heroes App (`tomb_of_heroes_app`)
+//! # Tomb of Heroes Application Entry Point
 //!
-//! Point d'entrée de l'application cliente Bevy 0.15 pour le jeu *Tomb of Heroes*.
-//! Intègre le rendu 2D pixel-art, la capture des entrées utilisateur et l'interface egui.
+//! Launches the Bevy 0.15 graphical host for *Tomb of Heroes*.
+
+use tomb_of_heroes_app::build_app;
 
 fn main() {
-    // Squelette de démarrage headless/client.
-    // L'injection des systèmes Bevy et des plugins d'affichage sera exécutée
-    // dans le cadre des cycles de développement TDD subséquents.
+    build_app().run();
 }
