@@ -4,7 +4,7 @@
 
 pub mod astar;
 pub mod coordinates;
-pub mod error;
+pub(crate) mod error;
 pub mod grid;
 pub mod links;
 

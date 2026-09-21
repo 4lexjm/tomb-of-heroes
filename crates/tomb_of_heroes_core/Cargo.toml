@@ -100,3 +100,35 @@ path = "tests/m2_topo/test_vertical_transition_pitfall_one_way.rs"
 name = "test_astar_navigation"
 path = "tests/m2_topo/test_astar_navigation.rs"
 
+[[test]]
+name = "test_retreat_trigger_on_casualties"
+path = "tests/m4_intel/test_retreat_trigger_on_casualties.rs"
+
+[[test]]
+name = "test_portcullis_blocking"
+path = "tests/m4_intel/test_portcullis_blocking.rs"
+
+[[test]]
+name = "test_intel_transfer_on_escape"
+path = "tests/m4_intel/test_intel_transfer_on_escape.rs"
+
+[[test]]
+name = "test_intel_temporal_dissipation"
+path = "tests/m4_intel/test_intel_temporal_dissipation.rs"
+
+[[test]]
+name = "test_veteran_trait_generation"
+path = "tests/m4_intel/test_veteran_trait_generation.rs"
+
+[[test]]
+name = "test_hero_killed_at_exit_threshold_cancels_intel"
+path = "tests/m4_intel/test_hero_killed_at_exit_threshold_cancels_intel.rs"
+
+[[test]]
+name = "test_false_confidence_trap_penalty_application"
+path = "tests/m4_intel/test_false_confidence_trap_penalty_application.rs"
+
+[[test]]
+name = "test_guild_roster_overflow_eviction_policy"
+path = "tests/m4_intel/test_guild_roster_overflow_eviction_policy.rs"
+
