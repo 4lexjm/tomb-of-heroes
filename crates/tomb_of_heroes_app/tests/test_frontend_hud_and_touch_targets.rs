@@ -31,6 +31,7 @@ fn test_hud_initial_state_and_tools() {
     assert_eq!(hud.selected_tool, PlacementTool::None);
     assert!(!hud.is_paused);
     assert!(!hud.show_inspector);
+    assert!(!hud.show_about_modal);
     assert!(!hud.show_chrono_window);
     assert!(!hud.show_save_modal);
     assert_eq!(hud.wave, 1);

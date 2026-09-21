@@ -105,6 +105,12 @@ pub struct SpriteAtlasResource {
     pub layout: Handle<TextureAtlasLayout>,
 }
 
+/// Shared handle to the dark and macabre game logo texture.
+#[derive(Resource, Debug, Clone)]
+pub struct GameLogoResource {
+    pub texture: Handle<Image>,
+}
+
 /// Resource designating the active floor visualized by the player.
 #[derive(Resource, Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ActiveFloor(pub FloorId);
@@ -268,6 +274,13 @@ pub fn setup_tilemap_system(
         layout: layout_handle,
     };
     commands.insert_resource(atlas.clone());
+
+    // Register embedded dark & macabre game logo resource
+    let logo_image = crate::asset_gen::load_game_logo_image();
+    let logo_handle = images.add(logo_image);
+    commands.insert_resource(GameLogoResource {
+        texture: logo_handle,
+    });
 
     // Spawn tiles for active floor
     spawn_floor_tiles(&mut commands, &atlas, active_floor.0, &topology.dungeon);

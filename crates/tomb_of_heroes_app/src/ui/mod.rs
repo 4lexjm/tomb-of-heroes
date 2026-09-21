@@ -46,6 +46,7 @@ pub struct HudState {
     pub is_paused: bool,
     pub selected_tool: PlacementTool,
     pub show_inspector: bool,
+    pub show_about_modal: bool,
     pub show_chrono_window: bool,
     pub rewind_ticks: u64,
     pub show_save_modal: bool,
@@ -69,6 +70,7 @@ impl Default for HudState {
             is_paused: false,
             selected_tool: PlacementTool::None,
             show_inspector: false,
+            show_about_modal: false,
             show_chrono_window: false,
             rewind_ticks: 20,
             show_save_modal: false,
@@ -107,6 +109,7 @@ impl Plugin for HudPlugin {
                 hud_save_modal_system,
                 hud_inspector_panel_system,
                 hud_placement_execution_system,
+                hud_about_modal_system,
                 hud_end_game_modal_system,
             ),
         );
@@ -145,6 +148,19 @@ pub fn hud_status_bar_system(
         )
         .show(ctx, |ui| {
             ui.horizontal(|ui| {
+                // Dark & macabre game logo brand button
+                if ui
+                    .add(touch_btn(
+                        RichText::new("💀 TOMB OF HEROES")
+                            .color(Color32::from_rgb(0x00, 0xE5, 0xFF))
+                            .strong(),
+                    ))
+                    .on_hover_text("Tomb of Heroes — Sanctuaire & Lore")
+                    .clicked()
+                {
+                    hud_state.show_about_modal = !hud_state.show_about_modal;
+                }
+
                 // Left: Gauges (Mana & Dungeon Heart)
                 let mana_ratio = if hud_state.max_mana > 0 {
                     (hud_state.mana as f32 / hud_state.max_mana as f32).clamp(0.0, 1.0)
@@ -773,6 +789,68 @@ pub fn hud_placement_execution_system(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Systems: About & Lore Modal (Dark & Macabre Game Logo)
+// ─────────────────────────────────────────────────────────────────────────────
+
+pub fn hud_about_modal_system(
+    mut contexts: EguiContexts,
+    mut hud_state: ResMut<HudState>,
+    logo_res: Option<Res<crate::render::GameLogoResource>>,
+) {
+    if !hud_state.show_about_modal {
+        return;
+    }
+
+    let texture_id = logo_res
+        .as_ref()
+        .map(|res| contexts.add_image(res.texture.clone()));
+    let ctx = contexts.ctx_mut();
+    let mut is_open = hud_state.show_about_modal;
+    let mut close_requested = false;
+
+    egui::Window::new("💀 TOMB OF HEROES — Le Sanctuaire")
+        .open(&mut is_open)
+        .default_pos(egui::pos2(24.0, 70.0))
+        .resizable(false)
+        .collapsible(false)
+        .show(ctx, |ui| {
+            ui.vertical_centered(|ui| {
+                if let Some(tex_id) = texture_id {
+                    ui.image(egui::load::SizedTexture::new(tex_id, egui::vec2(180.0, 180.0)));
+                    ui.add_space(6.0);
+                }
+
+                ui.label(
+                    RichText::new("TOMB OF HEROES")
+                        .size(18.0)
+                        .strong()
+                        .color(Color32::from_rgb(0x00, 0xE5, 0xFF)),
+                );
+                ui.label(
+                    RichText::new("— Stratégie Déterministe & Nécromancie Tactique —")
+                        .italics()
+                        .color(Color32::from_rgb(0xA5, 0x30, 0x30)),
+                );
+
+                ui.add_space(8.0);
+                ui.separator();
+                ui.add_space(8.0);
+
+                ui.label(
+                    "Vous régnez sur les cryptes millénaires. Les aventuriers de la surface descendent piller votre Sanctuaire.\n\nConstruisez des remparts de roche, tendez des pièges d'acide mortels, relevez les cadavres des héros déchus en gardiens squelettes et zombies, et altérez le flux temporel pour triompher.",
+                );
+
+                ui.add_space(10.0);
+                if ui.add(touch_btn("Fermer")).clicked() {
+                    close_requested = true;
+                }
+            });
+        });
+
+    hud_state.show_about_modal = is_open && !close_requested;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Systems: End Game Modal (Victory / Defeat)
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -780,12 +858,16 @@ pub fn hud_end_game_modal_system(
     mut contexts: EguiContexts,
     mut hud_state: ResMut<HudState>,
     mut simulation: ResMut<WorldSimulation>,
+    logo_res: Option<Res<crate::render::GameLogoResource>>,
 ) {
     let phase = simulation.campaign().phase;
     if !matches!(phase, WavePhase::Victory | WavePhase::Defeat) {
         return;
     }
 
+    let texture_id = logo_res
+        .as_ref()
+        .map(|res| contexts.add_image(res.texture.clone()));
     let ctx = contexts.ctx_mut();
     let title = if phase == WavePhase::Victory {
         "🏆 VICTOIRE DE CAMPAGNE"
@@ -799,6 +881,14 @@ pub fn hud_end_game_modal_system(
         .anchor(egui::Align2::CENTER_CENTER, egui::Vec2::ZERO)
         .show(ctx, |ui| {
             ui.vertical_centered(|ui| {
+                if let Some(tex_id) = texture_id {
+                    ui.image(egui::load::SizedTexture::new(
+                        tex_id,
+                        egui::vec2(120.0, 120.0),
+                    ));
+                    ui.add_space(4.0);
+                }
+
                 if phase == WavePhase::Victory {
                     ui.label(
                         RichText::new("Le Maître de Guilde a été terrassé et le donjon triomphe !")

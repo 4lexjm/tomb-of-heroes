@@ -36,7 +36,15 @@ pub use viewport::{
 pub fn build_app() -> bevy::app::App {
     let mut app = bevy::app::App::new();
     app.add_plugins(
-        bevy::DefaultPlugins.set(bevy::render::texture::ImagePlugin::default_nearest()),
+        bevy::DefaultPlugins
+            .set(bevy::render::texture::ImagePlugin::default_nearest())
+            .set(bevy::window::WindowPlugin {
+                primary_window: Some(bevy::window::Window {
+                    title: "Tomb of Heroes".into(),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            }),
     );
     app.add_plugins(bevy_egui::EguiPlugin);
     app.add_plugins(TombOfHeroesAppPlugin);

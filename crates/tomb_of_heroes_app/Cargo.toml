@@ -35,7 +35,7 @@ zstd = { workspace = true }
 rand_xoshiro = { workspace = true }
 uuid = { workspace = true }
 blake3 = { version = "1.8", features = ["pure"] }
-image = { version = "0.25", default-features = false, features = ["png"] }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 
 # Features Bevy communes à toutes les plateformes.
 # bevy_egui résout déjà bevy — cette entrée ajoute les features de rendu

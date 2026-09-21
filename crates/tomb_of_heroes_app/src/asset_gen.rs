@@ -910,6 +910,33 @@ pub fn ensure_dungeon_sheet_exists(path: &Path) -> Result<(), std::io::Error> {
     Ok(())
 }
 
+/// Embedded raw PNG bytes of the dark & macabre game logo icon (256x256).
+pub const GAME_LOGO_ICON_BYTES: &[u8] = include_bytes!("../../../assets/branding/icon_256.png");
+
+/// Returns the embedded 256x256 dark & macabre game logo as a Bevy `Image`.
+#[must_use]
+pub fn load_game_logo_image() -> bevy::image::Image {
+    let (width, height, data) = match image::load_from_memory(GAME_LOGO_ICON_BYTES) {
+        Ok(dynamic) => {
+            let rgba = dynamic.to_rgba8();
+            let (w, h) = rgba.dimensions();
+            (w, h, rgba.into_raw())
+        }
+        Err(_) => (1, 1, vec![0, 0, 0, 255]),
+    };
+    bevy::image::Image::new(
+        bevy::render::render_resource::Extent3d {
+            width,
+            height,
+            depth_or_array_layers: 1,
+        },
+        bevy::render::render_resource::TextureDimension::D2,
+        data,
+        bevy::render::render_resource::TextureFormat::Rgba8UnormSrgb,
+        bevy::render::render_asset::RenderAssetUsages::default(),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -930,5 +957,14 @@ mod tests {
         let png_bytes = res.unwrap_or_default();
         assert!(png_bytes.len() > 8);
         assert_eq!(&png_bytes[0..4], &[0x89, 0x50, 0x4E, 0x47]); // \x89PNG
+    }
+
+    #[test]
+    fn test_game_logo_embedded_bytes() {
+        assert!(GAME_LOGO_ICON_BYTES.len() > 1000);
+        assert_eq!(&GAME_LOGO_ICON_BYTES[0..4], &[0x89, 0x50, 0x4E, 0x47]);
+        let logo_img = load_game_logo_image();
+        assert_eq!(logo_img.width(), 256);
+        assert_eq!(logo_img.height(), 256);
     }
 }
