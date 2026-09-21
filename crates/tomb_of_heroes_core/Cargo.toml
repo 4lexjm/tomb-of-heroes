@@ -39,3 +39,19 @@ path = "tests/m1_arch/test_prng_stream_isolation.rs"
 [[test]]
 name = "test_state_hash_repeatability"
 path = "tests/m1_arch/test_state_hash_repeatability.rs"
+
+[[test]]
+name = "test_action_journal_ordering"
+path = "tests/m5_chrono/test_action_journal_ordering.rs"
+
+[[test]]
+name = "test_action_journal_interval_query"
+path = "tests/m5_chrono/test_action_journal_interval_query.rs"
+
+[[test]]
+name = "test_action_journal_truncation"
+path = "tests/m5_chrono/test_action_journal_truncation.rs"
+
+[[test]]
+name = "test_action_journal_serde"
+path = "tests/m5_chrono/test_action_journal_serde.rs"
