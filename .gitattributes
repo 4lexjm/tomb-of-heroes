@@ -1,0 +1,16 @@
+# Normalisation des fins de ligne
+* text=auto eol=lf
+
+# Déclarations explicites
+*.rs text eol=lf
+*.toml text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+
+# Formats binaires
+*.png binary
+*.zst binary
+*.dungeon binary
+
+# Exclure la documentation des statistiques linguistiques GitHub
+docs/** linguist-documentation

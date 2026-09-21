@@ -1,0 +1,17 @@
+[package]
+name = "tomb_of_heroes_core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Deterministic headless core domain library for Tomb of Heroes"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+zstd = { workspace = true }
+rand_xoshiro = { workspace = true }
+uuid = { workspace = true }
+
+[lints]
+workspace = true

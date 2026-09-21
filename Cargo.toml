@@ -1,0 +1,58 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/tomb_of_heroes_core",
+    "crates/tomb_of_heroes_app",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Tomb of Heroes Systems Architecture Team"]
+license = "MIT OR Apache-2.0"
+description = "Tomb of Heroes: Tactical Keep Master - Deterministic Reverse Dungeon Crawler"
+repository = "https://github.com/example/tomb-of-heroes"
+
+[workspace.dependencies]
+# Dépendances partagées vérifiées et verrouillées
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+zstd = "0.13"
+rand_xoshiro = "0.6"
+uuid = { version = "1.10", features = ["v4", "serde"] }
+
+# Moteur Bevy 0.15 et intégration UI (réservé au conteneur applicatif app)
+bevy = { version = "0.15", default-features = false, features = [
+    "bevy_asset",
+    "bevy_winit",
+    "bevy_render",
+    "bevy_core_pipeline",
+    "bevy_sprite",
+    "bevy_text",
+    "bevy_ui",
+    "x11",
+    "png",
+] }
+bevy_egui = "0.31"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+missing_debug_implementations = "warn"
+
+[workspace.lints.clippy]
+unwrap_used = "deny"
+expect_used = "deny"
+panic = "deny"
+todo = "warn"
+dbg_macro = "deny"
+
+[profile.release]
+opt-level = "z"        # Optimisation agressive de l'empreinte binaire pour mobile
+lto = "fat"            # Optimisation inter-modules complète (Link-Time Optimization)
+codegen-units = 1      # Réduction de la parallélisation de génération pour un inlining maximal
+panic = "abort"        # Suppression des tables de déroulement de pile (unwind) pour compacité
+strip = true           # Élagage complet des symboles et tables de débogage
+
+[profile.dev]
+opt-level = 0
+debug = true

@@ -1,0 +1,79 @@
+{
+  "$schema": "./balance.schema.json",
+  "schema_version": "1.0.0",
+  "simulation": {
+    "tick_hz": 20,
+    "tick_duration_micros": 50000,
+    "max_catchup_ticks_per_frame": 5,
+    "snapshots_interval_ticks": 100,
+    "snapshots_history_capacity": 12
+  },
+  "topology": {
+    "default_hero_vision_radius": 8,
+    "semi_opaque_vision_penalty_tiles": 3,
+    "stairs_traversal_ticks": 40,
+    "ladder_traversal_ticks": 80,
+    "ladder_vulnerability_penalty_bps": 2500,
+    "pitfall_traversal_ticks": 5,
+    "portal_traversal_ticks": 10,
+    "frontier_utility_weight_dist_bps": 150,
+    "frontier_utility_weight_terror_bps": 200,
+    "frontier_utility_weight_room_bps": 50
+  },
+  "corpse_and_terror": {
+    "corpse_default_structural_hp": 50,
+    "corpse_damaged_threshold_hp": 25,
+    "corpse_max_stack_per_tile": 3,
+    "corpse_decay_ticks": 6000,
+    "corpse_base_soul_essence": 15,
+    "corpse_base_terror_potency_bps": 2500,
+    "bravery_novice_bps": 2000,
+    "bravery_veteran_bps": 6500,
+    "bravery_inquisitor_bps": 9500,
+    "terror_threshold_shaken_bps": 3000,
+    "terror_threshold_disrupted_bps": 6000,
+    "terror_threshold_panic_bps": 8500,
+    "shaken_accuracy_penalty_bps": 1500,
+    "shaken_speed_penalty_bps": 1000,
+    "panic_item_drop_chance_bps": 3000
+  },
+  "necromancy": {
+    "skeleton_mana_cost": 40,
+    "zombie_mana_cost": 60,
+    "spectre_mana_cost": 90,
+    "cleric_sanctify_channel_ticks": 60,
+    "corpse_explosion_damage_hp": 80,
+    "corpse_explosion_terror_bps": 2000,
+    "corpse_explosion_radius_chebyshev": 2
+  },
+  "flee_and_intel": {
+    "retreat_hp_threshold_bps": 2500,
+    "retreat_squad_casualty_threshold_bps": 5000,
+    "retreat_speed_bonus_bps": 1500,
+    "portcullis_break_ticks": 100,
+    "dimensional_anchor_radius": 6,
+    "dimensional_anchor_inhibition_bps": 10000,
+    "intel_initial_confidence_bps": 10000,
+    "intel_dissipation_rate_bps_per_day": 100,
+    "day_duration_ticks": 24000,
+    "false_confidence_trap_penalty_bps": 3000
+  },
+  "veterancy": {
+    "max_guild_roster_size": 32,
+    "trap_paranoia_detection_bonus_bps": 4000,
+    "undead_slayer_damage_bonus_bps": 2500,
+    "vengeful_tenacity_threshold_bonus_bps": 3000
+  },
+  "chronomancy": {
+    "rewind_base_mana_cost": 20,
+    "rewind_cost_per_100_ticks_bps": 500,
+    "chrono_paradox_allied_terror_bps": 500,
+    "chrono_ward_anticipation_lead_ticks": 5
+  },
+  "viewport": {
+    "safe_zone_width_px": 320,
+    "safe_zone_height_px": 240,
+    "canvas_reference_width_16_9": 426,
+    "canvas_max_width_21_9": 560
+  }
+}

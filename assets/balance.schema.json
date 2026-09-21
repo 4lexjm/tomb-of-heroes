@@ -1,0 +1,478 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tombofheroes.game/schemas/balance.schema.json",
+  "title": "TombOfHeroesBalanceConfig",
+  "description": "Schéma formel d'équilibrage et de paramétrage systémique pour Tomb of Heroes. Toutes les grandeurs continues sont exprimées en points de base entiers (10 000 = 100,00 %) ou en unités discrètes de simulation. Zéro flottant.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "simulation",
+    "topology",
+    "corpse_and_terror",
+    "necromancy",
+    "flee_and_intel",
+    "veterancy",
+    "chronomancy",
+    "viewport"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "description": "Version sémantique du format de schéma."
+    },
+    "simulation": {
+      "type": "object",
+      "required": [
+        "tick_hz",
+        "tick_duration_micros",
+        "max_catchup_ticks_per_frame",
+        "snapshots_interval_ticks",
+        "snapshots_history_capacity"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "tick_hz": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 120,
+          "description": "Fréquence de l'horloge logique fixe en Hertz."
+        },
+        "tick_duration_micros": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Durée exacte d'un tick logique en microsecondes (ex: 50 000 pour 20 Hz)."
+        },
+        "max_catchup_ticks_per_frame": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20,
+          "description": "Nombre maximal de ticks logiques exécutables lors d'une seule frame de rendu."
+        },
+        "snapshots_interval_ticks": {
+          "type": "integer",
+          "minimum": 10,
+          "description": "Intervalle de génération des instantanés d'état pour le rembobinage."
+        },
+        "snapshots_history_capacity": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 100,
+          "description": "Nombre maximal d'instantanés conservés dans le RingBuffer."
+        }
+      }
+    },
+    "topology": {
+      "type": "object",
+      "required": [
+        "default_hero_vision_radius",
+        "semi_opaque_vision_penalty_tiles",
+        "stairs_traversal_ticks",
+        "ladder_traversal_ticks",
+        "ladder_vulnerability_penalty_bps",
+        "pitfall_traversal_ticks",
+        "portal_traversal_ticks",
+        "frontier_utility_weight_dist_bps",
+        "frontier_utility_weight_terror_bps",
+        "frontier_utility_weight_room_bps"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "default_hero_vision_radius": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 32,
+          "description": "Portée de vision par défaut en tuiles (Chebyshev)."
+        },
+        "semi_opaque_vision_penalty_tiles": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10,
+          "description": "Pénalité de portée infligée par une tuile semi-opaque (brume, toiles)."
+        },
+        "stairs_traversal_ticks": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Durée de franchissement d'un escalier en ticks."
+        },
+        "ladder_traversal_ticks": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Durée d'escalade d'une échelle en ticks."
+        },
+        "ladder_vulnerability_penalty_bps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "Majoration des dégâts subis sur échelle en points de base (ex: 2500 = +25%)."
+        },
+        "pitfall_traversal_ticks": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Durée de chute dans une trappe/fosse en ticks."
+        },
+        "portal_traversal_ticks": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Durée de téléportation via portail en ticks."
+        },
+        "frontier_utility_weight_dist_bps": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Poids de pénalité de distance par tuile dans le calcul de frontière (BPS)."
+        },
+        "frontier_utility_weight_terror_bps": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Poids d'aversion à la terreur dans le calcul de frontière (BPS)."
+        },
+        "frontier_utility_weight_room_bps": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Poids d'attractivité de volume de salle dans le calcul de frontière (BPS)."
+        }
+      }
+    },
+    "corpse_and_terror": {
+      "type": "object",
+      "required": [
+        "corpse_default_structural_hp",
+        "corpse_damaged_threshold_hp",
+        "corpse_max_stack_per_tile",
+        "corpse_decay_ticks",
+        "corpse_base_soul_essence",
+        "corpse_base_terror_potency_bps",
+        "bravery_novice_bps",
+        "bravery_veteran_bps",
+        "bravery_inquisitor_bps",
+        "terror_threshold_shaken_bps",
+        "terror_threshold_disrupted_bps",
+        "terror_threshold_panic_bps",
+        "shaken_accuracy_penalty_bps",
+        "shaken_speed_penalty_bps",
+        "panic_item_drop_chance_bps"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "corpse_default_structural_hp": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Points de structure initiaux d'un cadavre intact."
+        },
+        "corpse_damaged_threshold_hp": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Seuil sous lequel un cadavre devient endommagé."
+        },
+        "corpse_max_stack_per_tile": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "description": "Nombre maximal de dépouilles superposables sur une même tuile."
+        },
+        "corpse_decay_ticks": {
+          "type": "integer",
+          "minimum": 100,
+          "description": "Durée avant décomposition naturelle complète en poussière."
+        },
+        "corpse_base_soul_essence": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Quantité d'essence récoltable sur un corps intact."
+        },
+        "corpse_base_terror_potency_bps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "Puissance d'émanation traumatique de base en points de base."
+        },
+        "bravery_novice_bps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "Bravoure d'un aventurier novice (BPS)."
+        },
+        "bravery_veteran_bps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "Bravoure d'un aventurier vétéran (BPS)."
+        },
+        "bravery_inquisitor_bps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "Bravoure d'un inquisiteur d'élite (BPS)."
+        },
+        "terror_threshold_shaken_bps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "Seuil de bascule en état Ébranlé (BPS)."
+        },
+        "terror_threshold_disrupted_bps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "Seuil de bascule en état Déstabilisé (BPS)."
+        },
+        "terror_threshold_panic_bps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "Seuil de bascule en état de Panique Aveugle (BPS)."
+        },
+        "shaken_accuracy_penalty_bps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "Malus de précision en état ébranlé (BPS)."
+        },
+        "shaken_speed_penalty_bps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "Malus de déplacement en état ébranlé (BPS)."
+        },
+        "panic_item_drop_chance_bps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "Probabilité par seconde de lâcher son arme en panique (BPS)."
+        }
+      }
+    },
+    "necromancy": {
+      "type": "object",
+      "required": [
+        "skeleton_mana_cost",
+        "zombie_mana_cost",
+        "spectre_mana_cost",
+        "cleric_sanctify_channel_ticks",
+        "corpse_explosion_damage_hp",
+        "corpse_explosion_terror_bps",
+        "corpse_explosion_radius_chebyshev"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "skeleton_mana_cost": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Coût en Mana Sombre pour relever un squelette."
+        },
+        "zombie_mana_cost": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Coût en Mana Sombre pour façonner un zombie."
+        },
+        "spectre_mana_cost": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Coût en Mana Sombre pour libérer un spectre d'âme."
+        },
+        "cleric_sanctify_channel_ticks": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Durée de canalisation de purification par un clerc (ticks)."
+        },
+        "corpse_explosion_damage_hp": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Dégâts physiques bruts de l'explosion macabre."
+        },
+        "corpse_explosion_terror_bps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "Terreur instantanée projetée par l'explosion macabre (BPS)."
+        },
+        "corpse_explosion_radius_chebyshev": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10,
+          "description": "Rayon d'effet de l'explosion macabre en tuiles."
+        }
+      }
+    },
+    "flee_and_intel": {
+      "type": "object",
+      "required": [
+        "retreat_hp_threshold_bps",
+        "retreat_squad_casualty_threshold_bps",
+        "retreat_speed_bonus_bps",
+        "portcullis_break_ticks",
+        "dimensional_anchor_radius",
+        "dimensional_anchor_inhibition_bps",
+        "intel_initial_confidence_bps",
+        "intel_dissipation_rate_bps_per_day",
+        "day_duration_ticks",
+        "false_confidence_trap_penalty_bps"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "retreat_hp_threshold_bps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "Seuil de santé relative déclenchant le repli (BPS)."
+        },
+        "retreat_squad_casualty_threshold_bps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "Proportion de pertes d'escouade déclenchant le repli (BPS)."
+        },
+        "retreat_speed_bonus_bps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "Bonus de vitesse en phase de fuite (BPS)."
+        },
+        "portcullis_break_ticks": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Temps requis pour forcer une herse close en ticks."
+        },
+        "dimensional_anchor_radius": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20,
+          "description": "Rayon de blocage de l'ancre dimensionnelle en tuiles."
+        },
+        "dimensional_anchor_inhibition_bps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "Efficacité d'inhibition des sorts de téléportation (BPS)."
+        },
+        "intel_initial_confidence_bps": {
+          "type": "integer",
+          "minimum": 1000,
+          "maximum": 10000,
+          "description": "Indice de confiance initial d'un renseignement rapporté (BPS)."
+        },
+        "intel_dissipation_rate_bps_per_day": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "Taux de perte de fraîcheur du renseignement par jour de jeu (BPS)."
+        },
+        "day_duration_ticks": {
+          "type": "integer",
+          "minimum": 100,
+          "description": "Durée en ticks d'un cycle jour/nuit de jeu."
+        },
+        "false_confidence_trap_penalty_bps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "Malus de détection de piège face à un piège déplacé (BPS)."
+        }
+      }
+    },
+    "veterancy": {
+      "type": "object",
+      "required": [
+        "max_guild_roster_size",
+        "trap_paranoia_detection_bonus_bps",
+        "undead_slayer_damage_bonus_bps",
+        "vengeful_tenacity_threshold_bonus_bps"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "max_guild_roster_size": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 256,
+          "description": "Capacité maximale du registre de vétérans de la guilde."
+        },
+        "trap_paranoia_detection_bonus_bps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "Bonus de perception des pièges conféré par le trait Paranoïa (BPS)."
+        },
+        "undead_slayer_damage_bonus_bps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "Bonus de dégâts contre les morts-vivants (BPS)."
+        },
+        "vengeful_tenacity_threshold_bonus_bps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "Résistance accrue au seuil de retraite pour les revanchards (BPS)."
+        }
+      }
+    },
+    "chronomancy": {
+      "type": "object",
+      "required": [
+        "rewind_base_mana_cost",
+        "rewind_cost_per_100_ticks_bps",
+        "chrono_paradox_allied_terror_bps",
+        "chrono_ward_anticipation_lead_ticks"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "rewind_base_mana_cost": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Coût fixe de déclenchement du rembobinage en Mana Chronomantique."
+        },
+        "rewind_cost_per_100_ticks_bps": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Coût additionnel par tranche de 100 ticks rembobinés."
+        },
+        "chrono_paradox_allied_terror_bps": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000,
+          "description": "Terreur sourde infligée aux alliés d'un héros éveillé (BPS)."
+        },
+        "chrono_ward_anticipation_lead_ticks": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 60,
+          "description": "Délai d'anticipation avant activation de bouclier préemptif (ticks)."
+        }
+      }
+    },
+    "viewport": {
+      "type": "object",
+      "required": [
+        "safe_zone_width_px",
+        "safe_zone_height_px",
+        "canvas_reference_width_16_9",
+        "canvas_max_width_21_9"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "safe_zone_width_px": {
+          "type": "integer",
+          "minimum": 160,
+          "maximum": 1920,
+          "description": "Largeur de la Safe Zone inviolable en pixels logiques."
+        },
+        "safe_zone_height_px": {
+          "type": "integer",
+          "minimum": 120,
+          "maximum": 1080,
+          "description": "Hauteur de référence fixe en pixels logiques."
+        },
+        "canvas_reference_width_16_9": {
+          "type": "integer",
+          "minimum": 160,
+          "description": "Largeur logique pour le format d'aspect 16:9."
+        },
+        "canvas_max_width_21_9": {
+          "type": "integer",
+          "minimum": 160,
+          "description": "Largeur logique maximale pour le format ultra-large 21:9."
+        }
+      }
+    }
+  }
+}

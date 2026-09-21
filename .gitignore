@@ -1,0 +1,36 @@
+# Rust / Cargo
+/target/
+**/*.rs.bk
+*.bk
+
+# Fichiers de sauvegarde et données temporaires du jeu
+/saves/*.tmp
+/saves/*.dungeon
+/assets/saves/
+
+# Environnements et clés locales
+.env
+.env.*
+!.env.example
+
+# IDEs et éditeurs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Mobile Build Artifacts & Caches
+*.apk
+*.aab
+*.ipa
+.gradle/
+build/
+DerivedData/
+
+# Outils d'agents IA et logs
+.aider*
+.claude/
+*.log
