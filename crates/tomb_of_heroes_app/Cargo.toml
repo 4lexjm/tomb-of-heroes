@@ -6,6 +6,34 @@ authors.workspace = true
 license.workspace = true
 description = "Bevy 0.15 graphical application and egui interface for Tomb of Heroes"
 
+[lib]
+name = "tomb_of_heroes_app"
+path = "src/lib.rs"
+
+[[bin]]
+name = "tomb_of_heroes_app"
+path = "src/main.rs"
+
+[[test]]
+name = "test_viewport_integer_scale_calculation"
+path = "tests/test_viewport_integer_scale_calculation.rs"
+
+[[test]]
+name = "test_safe_zone_clamping"
+path = "tests/test_safe_zone_clamping.rs"
+
+[[test]]
+name = "test_aspect_ratio_narrower_than_4_3"
+path = "tests/test_aspect_ratio_narrower_than_4_3.rs"
+
+[[test]]
+name = "test_fixed_tick_accumulator"
+path = "tests/test_fixed_tick_accumulator.rs"
+
+[[test]]
+name = "test_bevy_app_headless_step"
+path = "tests/test_bevy_app_headless_step.rs"
+
 [dependencies]
 tomb_of_heroes_core = { path = "../tomb_of_heroes_core" }
 bevy = { workspace = true }
