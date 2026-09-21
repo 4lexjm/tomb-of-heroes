@@ -13,12 +13,15 @@
 #![deny(clippy::float_arithmetic)]
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
+extern crate alloc;
+
 pub mod config;
 pub mod hash;
 pub mod id;
 pub mod math;
 pub mod rng;
 pub mod time;
+pub mod topology;
 pub mod world;
 
 pub use config::*;
@@ -27,4 +30,5 @@ pub use id::*;
 pub use math::*;
 pub use rng::*;
 pub use time::*;
+pub use topology::*;
 pub use world::*;

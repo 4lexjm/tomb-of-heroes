@@ -2,3 +2,6 @@
 check-core = "check -p tomb_of_heroes_core"
 check-app = "check -p tomb_of_heroes_app"
 lint-all = "clippy --workspace --all-targets -- -D warnings"
+
+[build]
+target-dir = "target"

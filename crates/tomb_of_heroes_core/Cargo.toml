@@ -39,3 +39,15 @@ path = "tests/m1_arch/test_prng_stream_isolation.rs"
 [[test]]
 name = "test_state_hash_repeatability"
 path = "tests/m1_arch/test_state_hash_repeatability.rs"
+
+[[test]]
+name = "test_metric_distances"
+path = "tests/m2_topo/test_metric_distances.rs"
+
+[[test]]
+name = "test_vertical_transition_pitfall_one_way"
+path = "tests/m2_topo/test_vertical_transition_pitfall_one_way.rs"
+
+[[test]]
+name = "test_astar_navigation"
+path = "tests/m2_topo/test_astar_navigation.rs"
