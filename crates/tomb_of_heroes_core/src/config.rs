@@ -222,6 +222,10 @@ pub struct TopologyConfig {
     pub frontier_terror_weight_bps: BasisPoints,
     /// Room area heuristic weight in frontier utility calculation (50 BPS/tile).
     pub frontier_room_weight_bps: BasisPoints,
+    /// Base utility for frontier evaluation (10_000 BPS).
+    pub frontier_base_utility_bps: BasisPoints,
+    /// Reduction of remaining vision range for semi-opaque tiles (3 tiles).
+    pub semi_opaque_range_penalty: u32,
 }
 
 impl Default for TopologyConfig {
@@ -237,6 +241,8 @@ impl Default for TopologyConfig {
             frontier_distance_weight_bps: BasisPoints(150),
             frontier_terror_weight_bps: BasisPoints(200),
             frontier_room_weight_bps: BasisPoints(50),
+            frontier_base_utility_bps: BasisPoints(10_000),
+            semi_opaque_range_penalty: 3,
         }
     }
 }

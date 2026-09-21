@@ -9,6 +9,7 @@ use crate::topology::astar::find_path_astar;
 use crate::topology::coordinates::{FloorId, GridCoord, WorldCoord};
 use crate::topology::error::NavigationError;
 use crate::topology::links::VerticalLink;
+use crate::topology::shadowcasting::TileOpacity;
 
 /// Passability and geometry for an individual floor in the dungeon.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -18,6 +19,9 @@ pub struct FloorGrid {
     width: u32,
     height: u32,
     passable: Vec<bool>,
+    opacity: Vec<TileOpacity>,
+    terror_miasma: Vec<u32>,
+    room_area: Vec<u32>,
 }
 
 impl FloorGrid {
@@ -35,12 +39,20 @@ impl FloorGrid {
         default_passable: bool,
     ) -> Self {
         let total_cells = (width as usize).saturating_mul(height as usize);
+        let default_opacity = if default_passable {
+            TileOpacity::Transparent
+        } else {
+            TileOpacity::Opaque
+        };
         Self {
             floor,
             min_coord,
             width,
             height,
             passable: alloc::vec![default_passable; total_cells],
+            opacity: alloc::vec![default_opacity; total_cells],
+            terror_miasma: alloc::vec![0; total_cells],
+            room_area: alloc::vec![0; total_cells],
         }
     }
 
@@ -103,6 +115,82 @@ impl FloorGrid {
         let idx = self.coord_to_index(coord)?;
         if let Some(cell) = self.passable.get_mut(idx) {
             *cell = passable;
+            if let Some(op) = self.opacity.get_mut(idx) {
+                if !passable && *op == TileOpacity::Transparent {
+                    *op = TileOpacity::Opaque;
+                } else if passable && *op == TileOpacity::Opaque {
+                    *op = TileOpacity::Transparent;
+                }
+            }
+            Ok(())
+        } else {
+            Err(NavigationError::OutOfBounds)
+        }
+    }
+
+    /// Returns the vision opacity of the specified coordinate.
+    pub fn opacity(&self, coord: GridCoord) -> TileOpacity {
+        match self.coord_to_index(coord) {
+            Ok(idx) => self
+                .opacity
+                .get(idx)
+                .copied()
+                .unwrap_or(TileOpacity::Opaque),
+            Err(_) => TileOpacity::Opaque,
+        }
+    }
+
+    /// Sets the vision opacity of a tile on this floor.
+    pub fn set_opacity(
+        &mut self,
+        coord: GridCoord,
+        opacity: TileOpacity,
+    ) -> Result<(), NavigationError> {
+        let idx = self.coord_to_index(coord)?;
+        if let Some(cell) = self.opacity.get_mut(idx) {
+            *cell = opacity;
+            Ok(())
+        } else {
+            Err(NavigationError::OutOfBounds)
+        }
+    }
+
+    /// Returns terror miasma intensity at the given coordinate.
+    pub fn terror_miasma(&self, coord: GridCoord) -> u32 {
+        match self.coord_to_index(coord) {
+            Ok(idx) => self.terror_miasma.get(idx).copied().unwrap_or(0),
+            Err(_) => 0,
+        }
+    }
+
+    /// Sets terror miasma intensity at the given coordinate.
+    pub fn set_terror_miasma(
+        &mut self,
+        coord: GridCoord,
+        miasma: u32,
+    ) -> Result<(), NavigationError> {
+        let idx = self.coord_to_index(coord)?;
+        if let Some(cell) = self.terror_miasma.get_mut(idx) {
+            *cell = miasma;
+            Ok(())
+        } else {
+            Err(NavigationError::OutOfBounds)
+        }
+    }
+
+    /// Returns room area heuristic value at the given coordinate.
+    pub fn room_area(&self, coord: GridCoord) -> u32 {
+        match self.coord_to_index(coord) {
+            Ok(idx) => self.room_area.get(idx).copied().unwrap_or(0),
+            Err(_) => 0,
+        }
+    }
+
+    /// Sets room area heuristic value at the given coordinate.
+    pub fn set_room_area(&mut self, coord: GridCoord, area: u32) -> Result<(), NavigationError> {
+        let idx = self.coord_to_index(coord)?;
+        if let Some(cell) = self.room_area.get_mut(idx) {
+            *cell = area;
             Ok(())
         } else {
             Err(NavigationError::OutOfBounds)
@@ -177,6 +265,73 @@ impl DungeonGrid {
         config: &TopologyConfig,
     ) -> Result<Vec<WorldCoord>, NavigationError> {
         find_path_astar(self, start, goal, config)
+    }
+
+    /// Returns the vision opacity of a world coordinate.
+    pub fn opacity(&self, coord: WorldCoord) -> TileOpacity {
+        if let Some(floor_grid) = self.floors.get(&coord.floor) {
+            floor_grid.opacity(coord.coord)
+        } else {
+            TileOpacity::Opaque
+        }
+    }
+
+    /// Sets the vision opacity of a world coordinate.
+    pub fn set_opacity(
+        &mut self,
+        coord: WorldCoord,
+        opacity: TileOpacity,
+    ) -> Result<(), NavigationError> {
+        if let Some(floor_grid) = self.floors.get_mut(&coord.floor) {
+            floor_grid.set_opacity(coord.coord, opacity)
+        } else {
+            Err(NavigationError::FloorNotFound)
+        }
+    }
+
+    /// Returns the terror miasma at a world coordinate.
+    pub fn terror_miasma(&self, coord: WorldCoord) -> u32 {
+        if let Some(floor_grid) = self.floors.get(&coord.floor) {
+            floor_grid.terror_miasma(coord.coord)
+        } else {
+            0
+        }
+    }
+
+    /// Sets the terror miasma at a world coordinate.
+    pub fn set_terror_miasma(
+        &mut self,
+        coord: WorldCoord,
+        miasma: u32,
+    ) -> Result<(), NavigationError> {
+        if let Some(floor_grid) = self.floors.get_mut(&coord.floor) {
+            floor_grid.set_terror_miasma(coord.coord, miasma)
+        } else {
+            Err(NavigationError::FloorNotFound)
+        }
+    }
+
+    /// Returns the room area heuristic at a world coordinate.
+    pub fn room_area(&self, coord: WorldCoord) -> u32 {
+        if let Some(floor_grid) = self.floors.get(&coord.floor) {
+            floor_grid.room_area(coord.coord)
+        } else {
+            0
+        }
+    }
+
+    /// Sets the room area heuristic at a world coordinate.
+    pub fn set_room_area(&mut self, coord: WorldCoord, area: u32) -> Result<(), NavigationError> {
+        if let Some(floor_grid) = self.floors.get_mut(&coord.floor) {
+            floor_grid.set_room_area(coord.coord, area)
+        } else {
+            Err(NavigationError::FloorNotFound)
+        }
+    }
+
+    /// Returns reference to all registered floor grids.
+    pub fn floors(&self) -> &BTreeMap<FloorId, FloorGrid> {
+        &self.floors
     }
 }
 
