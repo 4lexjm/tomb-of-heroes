@@ -13,6 +13,7 @@
 #![deny(clippy::float_arithmetic)]
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
+pub mod chrono;
 pub mod config;
 pub mod hash;
 pub mod id;
@@ -21,6 +22,7 @@ pub mod rng;
 pub mod time;
 pub mod world;
 
+pub use chrono::*;
 pub use config::*;
 pub use hash::*;
 pub use id::*;
