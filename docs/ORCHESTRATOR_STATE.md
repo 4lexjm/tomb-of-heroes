@@ -6,8 +6,8 @@ Dernière mise à jour : Initialisation de la mission
 
 | ID | Intitulé | Jalon / Branche | Dépendances | Statut | Commit |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **F01** | Arithmétique BPS & Configuration | Jalon 0 (Fondations) | - | ⏳ Prêt à lancer | - |
-| **F02** | LogicId, Horloge Fixe & État Core | Jalon 1 (Identifiants) | F01 | ⏸️ En attente | - |
+| **F01** | Arithmétique BPS & Configuration | Jalon 0 (Fondations) | - | ✅ Terminé | `48670cf` |
+| **F02** | LogicId, Horloge Fixe & État Core | Jalon 1 (Identifiants) | F01 | ⏳ Prêt à lancer | - |
 | **F03** | Topologie 2.5D & Navigation A* | Branche A (Topologie) | F02 | ⏸️ En attente | - |
 | **F04** | Cadavres, Terreur & Nécromancie | Branche B (Nécromancie) | F02 | ⏸️ En attente | - |
 | **F05** | Journal d'Actions & Command Pattern | Branche C (Chronomancie) | F02 | ⏸️ En attente | - |
@@ -31,8 +31,8 @@ Dernière mise à jour : Initialisation de la mission
 
 ## 3. Matrice des tests d'intégration globaux
 
-- Dernier run workspace : *En cours de compilation initiale*
-- Statut : *En attente du résultat de la baseline*
+- Dernier run workspace : `cargo test --workspace` sur `main` (`48670cf`)
+- Statut : ✅ **13 tests unitaires et d'intégration passés avec succès**, 0 avertissement clippy.
 
 ---
 
