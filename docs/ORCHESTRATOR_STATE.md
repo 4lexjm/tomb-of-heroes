@@ -8,12 +8,12 @@ Dernière mise à jour : Initialisation de la mission
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **F01** | Arithmétique BPS & Configuration | Jalon 0 (Fondations) | - | ✅ Terminé | `48670cf` |
 | **F02** | LogicId, Horloge Fixe & État Core | Jalon 1 (Identifiants) | F01 | ✅ Terminé | `c3c336b` |
-| **F03** | Topologie 2.5D & Navigation A* | Branche A (Topologie) | F02 | 🔄 En cours | - |
+| **F03** | Topologie 2.5D & Navigation A* | Branche A (Topologie) | F02 | ✅ Terminé | `5b7ac10` |
 | **F04** | Cadavres, Terreur & Nécromancie | Branche B (Nécromancie) | F02 | ✅ Terminé | `f120996` |
 | **F05** | Journal d'Actions & Command Pattern | Branche C (Chronomancie) | F02 | ✅ Terminé | `e1177c5` |
-| **F06** | Shadowcasting & HeroKnowledgeMap | Branche A (Topologie) | F03 | ⏸️ En attente | - |
-| **F07** | Fuite, Guilde & Vétérance | Branche B (Nécromancie) | F04 | ⏳ Prêt à lancer | - |
-| **F08** | Rembobinage & ChronoMemory | Branche C (Chronomancie) | F05 | ⏳ Prêt à lancer | - |
+| **F06** | Shadowcasting & HeroKnowledgeMap | Branche A (Topologie) | F03 | 🔄 En cours | - |
+| **F07** | Fuite, Guilde & Vétérance | Branche B (Nécromancie) | F04 | 🔄 En cours | - |
+| **F08** | Rembobinage & ChronoMemory | Branche C (Chronomancie) | F05 | 🔄 En cours | - |
 | **F09** | SaveEnvelope, Zstd & Persistance | Jalon 2 (Persistance) | F06, F07, F08 | ⏸️ En attente | - |
 | **F10** | Application Bevy 0.15 & UI Viewport | Jalon 3 (Présentation) | F09 | ⏸️ En attente | - |
 
@@ -23,7 +23,9 @@ Dernière mise à jour : Initialisation de la mission
 
 | Worktree Path | Branche | Sous-agent | Tâche | Statut |
 | :--- | :--- | :--- | :--- | :--- |
-| `.worktrees/F03-topologie-navigation` | `feature/F03-topologie-navigation` | `feature_engineer` | F03 : Topologie 2.5D & Navigation A* | 🚀 En cours |
+| `.worktrees/F06-shadowcasting-knowledge` | `feature/F06-shadowcasting-knowledge` | `feature_engineer` | F06 : Shadowcasting & HeroKnowledgeMap | 🚀 En cours |
+| `.worktrees/F07-fuite-guilde-veterance` | `feature/F07-fuite-guilde-veterance` | `feature_engineer` | F07 : Fuite, Guilde & Vétérance | 🚀 En cours |
+| `.worktrees/F08-rembobinage-chronomemory` | `feature/F08-rembobinage-chronomemory` | `feature_engineer` | F08 : Rembobinage & ChronoMemory | 🚀 En cours |
 
 ---
 
