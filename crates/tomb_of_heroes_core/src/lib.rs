@@ -13,6 +13,8 @@
 #![deny(clippy::float_arithmetic)]
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 
+extern crate alloc;
+
 pub mod chrono;
 pub mod config;
 pub mod hash;
