@@ -10,7 +10,7 @@ description = "Deterministic headless core domain library for Tomb of Heroes"
 serde = { workspace = true }
 serde_json = { workspace = true }
 zstd = { workspace = true }
-rand_xoshiro = { workspace = true }
+rand_xoshiro = { workspace = true, features = ["serde1"] }
 uuid = { workspace = true }
 
 [lints]
@@ -23,3 +23,19 @@ path = "tests/m1_arch/test_basis_points_rounding.rs"
 [[test]]
 name = "test_game_config"
 path = "tests/m1_arch/test_game_config.rs"
+
+[[test]]
+name = "test_tick_advancement"
+path = "tests/m1_arch/test_tick_advancement.rs"
+
+[[test]]
+name = "test_logic_id_monotonicity"
+path = "tests/m1_arch/test_logic_id_monotonicity.rs"
+
+[[test]]
+name = "test_prng_stream_isolation"
+path = "tests/m1_arch/test_prng_stream_isolation.rs"
+
+[[test]]
+name = "test_state_hash_repeatability"
+path = "tests/m1_arch/test_state_hash_repeatability.rs"
