@@ -23,7 +23,7 @@ Dernière mise à jour : Clôture de la 2e vague parallèle (F06, F07, F08) & Pr
 
 | Worktree Path | Branche | Sous-agent | Tâche | Statut |
 | :--- | :--- | :--- | :--- | :--- |
-| *(aucun)* | `main` | Orchestrateur | Préparation du worktree F09 | 🚀 En cours |
+| `.worktrees/F09-save-envelope-zstd` | `feature/F09-save-envelope-zstd` | `feature_engineer` | F09 : SaveEnvelope, Zstd & Persistance | 🚀 En cours |
 
 ---
 
