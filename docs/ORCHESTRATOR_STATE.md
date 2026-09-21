@@ -7,10 +7,10 @@ Dernière mise à jour : Initialisation de la mission
 | ID | Intitulé | Jalon / Branche | Dépendances | Statut | Commit |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **F01** | Arithmétique BPS & Configuration | Jalon 0 (Fondations) | - | ✅ Terminé | `48670cf` |
-| **F02** | LogicId, Horloge Fixe & État Core | Jalon 1 (Identifiants) | F01 | ⏳ Prêt à lancer | - |
-| **F03** | Topologie 2.5D & Navigation A* | Branche A (Topologie) | F02 | ⏸️ En attente | - |
-| **F04** | Cadavres, Terreur & Nécromancie | Branche B (Nécromancie) | F02 | ⏸️ En attente | - |
-| **F05** | Journal d'Actions & Command Pattern | Branche C (Chronomancie) | F02 | ⏸️ En attente | - |
+| **F02** | LogicId, Horloge Fixe & État Core | Jalon 1 (Identifiants) | F01 | ✅ Terminé | `c3c336b` |
+| **F03** | Topologie 2.5D & Navigation A* | Branche A (Topologie) | F02 | ⏳ Prêt à lancer | - |
+| **F04** | Cadavres, Terreur & Nécromancie | Branche B (Nécromancie) | F02 | ⏳ Prêt à lancer | - |
+| **F05** | Journal d'Actions & Command Pattern | Branche C (Chronomancie) | F02 | ⏳ Prêt à lancer | - |
 | **F06** | Shadowcasting & HeroKnowledgeMap | Branche A (Topologie) | F03 | ⏸️ En attente | - |
 | **F07** | Fuite, Guilde & Vétérance | Branche B (Nécromancie) | F04 | ⏸️ En attente | - |
 | **F08** | Rembobinage & ChronoMemory | Branche C (Chronomancie) | F05 | ⏸️ En attente | - |
@@ -31,8 +31,8 @@ Dernière mise à jour : Initialisation de la mission
 
 ## 3. Matrice des tests d'intégration globaux
 
-- Dernier run workspace : `cargo test --workspace` sur `main` (`48670cf`)
-- Statut : ✅ **13 tests unitaires et d'intégration passés avec succès**, 0 avertissement clippy.
+- Dernier run workspace : `cargo test --workspace` sur `main` (`c3c336b`)
+- Statut : ✅ **24 tests unitaires et d'intégration passés avec succès**, 0 avertissement clippy.
 
 ---
 
