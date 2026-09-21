@@ -8,12 +8,12 @@ Dernière mise à jour : Initialisation de la mission
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | **F01** | Arithmétique BPS & Configuration | Jalon 0 (Fondations) | - | ✅ Terminé | `48670cf` |
 | **F02** | LogicId, Horloge Fixe & État Core | Jalon 1 (Identifiants) | F01 | ✅ Terminé | `c3c336b` |
-| **F03** | Topologie 2.5D & Navigation A* | Branche A (Topologie) | F02 | ⏳ Prêt à lancer | - |
-| **F04** | Cadavres, Terreur & Nécromancie | Branche B (Nécromancie) | F02 | ⏳ Prêt à lancer | - |
-| **F05** | Journal d'Actions & Command Pattern | Branche C (Chronomancie) | F02 | ⏳ Prêt à lancer | - |
+| **F03** | Topologie 2.5D & Navigation A* | Branche A (Topologie) | F02 | 🔄 En cours | - |
+| **F04** | Cadavres, Terreur & Nécromancie | Branche B (Nécromancie) | F02 | 🔄 En cours | - |
+| **F05** | Journal d'Actions & Command Pattern | Branche C (Chronomancie) | F02 | ✅ Terminé | `e1177c5` |
 | **F06** | Shadowcasting & HeroKnowledgeMap | Branche A (Topologie) | F03 | ⏸️ En attente | - |
 | **F07** | Fuite, Guilde & Vétérance | Branche B (Nécromancie) | F04 | ⏸️ En attente | - |
-| **F08** | Rembobinage & ChronoMemory | Branche C (Chronomancie) | F05 | ⏸️ En attente | - |
+| **F08** | Rembobinage & ChronoMemory | Branche C (Chronomancie) | F05 | ⏳ Prêt à lancer | - |
 | **F09** | SaveEnvelope, Zstd & Persistance | Jalon 2 (Persistance) | F06, F07, F08 | ⏸️ En attente | - |
 | **F10** | Application Bevy 0.15 & UI Viewport | Jalon 3 (Présentation) | F09 | ⏸️ En attente | - |
 
@@ -21,18 +21,17 @@ Dernière mise à jour : Initialisation de la mission
 
 ## 2. Worktrees actifs & Sous-agents
 
-*Aucun sous-agent ou worktree actif pour le moment.*
-
 | Worktree Path | Branche | Sous-agent | Tâche | Statut |
 | :--- | :--- | :--- | :--- | :--- |
-| - | - | - | - | - |
+| `.worktrees/F03-topologie-navigation` | `feature/F03-topologie-navigation` | `feature_engineer` | F03 : Topologie 2.5D & Navigation A* | 🚀 En cours |
+| `.worktrees/F04-cadavres-terreur-necro` | `feature/F04-cadavres-terreur-necro` | `feature_engineer` | F04 : Cadavres/Terreur & Nécromancie | 🚀 En cours |
 
 ---
 
 ## 3. Matrice des tests d'intégration globaux
 
-- Dernier run workspace : `cargo test --workspace` sur `main` (`c3c336b`)
-- Statut : ✅ **24 tests unitaires et d'intégration passés avec succès**, 0 avertissement clippy.
+- Dernier run workspace : `cargo test --workspace` sur `main` (`e1177c5`)
+- Statut : ✅ **36 tests unitaires et d'intégration passés avec succès**, 0 avertissement clippy.
 
 ---
 
