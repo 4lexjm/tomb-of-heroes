@@ -39,3 +39,37 @@ path = "tests/m1_arch/test_prng_stream_isolation.rs"
 [[test]]
 name = "test_state_hash_repeatability"
 path = "tests/m1_arch/test_state_hash_repeatability.rs"
+
+[[test]]
+name = "test_corpse_spawn_on_kill"
+path = "tests/m3_necro/test_corpse_spawn_on_kill.rs"
+
+[[test]]
+name = "test_terror_accumulation_by_distance"
+path = "tests/m3_necro/test_terror_accumulation_by_distance.rs"
+
+[[test]]
+name = "test_panic_level_transitions"
+path = "tests/m3_necro/test_panic_level_transitions.rs"
+
+[[test]]
+name = "test_raise_skeleton_consumes_corpse"
+path = "tests/m3_necro/test_raise_skeleton_consumes_corpse.rs"
+
+[[test]]
+name = "test_cleric_sanctification"
+path = "tests/m3_necro/test_cleric_sanctification.rs"
+
+[[test]]
+name = "test_corpse_stack_slide_at_capacity_3"
+path = "tests/m3_necro/test_corpse_stack_slide_at_capacity_3.rs"
+
+[[test]]
+name = "test_terror_clamp_at_10_000"
+path = "tests/m3_necro/test_terror_clamp_at_10_000.rs"
+
+[[test]]
+name = "test_macabre_explosion"
+path = "tests/m3_necro/test_macabre_explosion.rs"
+
+

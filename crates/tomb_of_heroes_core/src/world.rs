@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 use crate::config::GameConfig;
 use crate::hash::{StateHash, StateHasher};
 use crate::id::{LogicId, LogicIdError, LogicIdGenerator};
+use crate::necro::CorpseRegistry;
 use crate::rng::{DeterministicRngBank, DungeonMasterSeed};
 use crate::time::Tick;
 
@@ -22,6 +23,7 @@ pub struct LogicWorld {
     id_generator: LogicIdGenerator,
     rng_bank: DeterministicRngBank,
     config: GameConfig,
+    corpses: CorpseRegistry,
 }
 
 impl LogicWorld {
@@ -33,6 +35,7 @@ impl LogicWorld {
             id_generator: LogicIdGenerator::new(),
             rng_bank: DeterministicRngBank::new(seed),
             config,
+            corpses: CorpseRegistry::new(),
         }
     }
 
@@ -102,5 +105,18 @@ impl LogicWorld {
     #[must_use]
     pub const fn config(&self) -> &GameConfig {
         &self.config
+    }
+
+    /// Returns an immutable reference to the corpse registry.
+    #[inline]
+    #[must_use]
+    pub const fn corpses(&self) -> &CorpseRegistry {
+        &self.corpses
+    }
+
+    /// Returns a mutable reference to the corpse registry.
+    #[inline]
+    pub fn corpses_mut(&mut self) -> &mut CorpseRegistry {
+        &mut self.corpses
     }
 }
