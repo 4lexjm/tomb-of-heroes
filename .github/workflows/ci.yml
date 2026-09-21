@@ -86,6 +86,21 @@ jobs:
           workspaces: ". -> target"
           key: "android-aarch64"
 
+      - name: Ensure Release Keystore
+        run: |
+          if [ ! -f crates/tomb_of_heroes_app/release.keystore ]; then
+            echo "Generating release keystore via keytool..."
+            keytool -genkeypair -v \
+              -keystore crates/tomb_of_heroes_app/release.keystore \
+              -alias tombofheroes \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -storepass tombofheroes \
+              -keypass tombofheroes \
+              -dname "CN=TombOfHeroes, OU=Tactical, O=KeepMaster, L=Unknown, S=Unknown, C=FR"
+          else
+            echo "Release keystore already present."
+          fi
+
       - name: Build Release APK
         run: cargo apk build --package tomb_of_heroes_app --release
 
