@@ -1,6 +1,6 @@
 # Journal d'Orchestration « Tomb of Heroes »
 
-Dernière mise à jour : Clôture de la 2e vague parallèle (F06, F07, F08) & Préparation Jalon 2 (F09)
+Dernière mise à jour : Intégration Jalon 2 (F09) & Lancement Jalon 3 (F10)
 
 ## 1. Vue globale du DAG des fonctionnalités
 
@@ -14,8 +14,8 @@ Dernière mise à jour : Clôture de la 2e vague parallèle (F06, F07, F08) & Pr
 | **F06** | Shadowcasting & HeroKnowledgeMap | Branche A (Topologie) | F03 | ✅ Terminé | `15a8a2a` |
 | **F07** | Fuite, Guilde & Vétérance | Branche B (Nécromancie) | F04 | ✅ Terminé | `dabd5a2` |
 | **F08** | Rembobinage & ChronoMemory | Branche C (Chronomancie) | F05 | ✅ Terminé | `f0dde64` |
-| **F09** | SaveEnvelope, Zstd & Persistance | Jalon 2 (Persistance) | F06, F07, F08 | 🔄 En cours | - |
-| **F10** | Application Bevy 0.15 & UI Viewport | Jalon 3 (Présentation) | F09 | ⏸️ En attente | - |
+| **F09** | SaveEnvelope, Zstd & Persistance | Jalon 2 (Persistance) | F06, F07, F08 | ✅ Terminé | `f09985a` |
+| **F10** | Application Bevy 0.15 & UI Viewport | Jalon 3 (Présentation) | F09 | 🔄 En cours | - |
 
 ---
 
@@ -23,14 +23,14 @@ Dernière mise à jour : Clôture de la 2e vague parallèle (F06, F07, F08) & Pr
 
 | Worktree Path | Branche | Sous-agent | Tâche | Statut |
 | :--- | :--- | :--- | :--- | :--- |
-| `.worktrees/F09-save-envelope-zstd` | `feature/F09-save-envelope-zstd` | `feature_engineer` | F09 : SaveEnvelope, Zstd & Persistance | 🚀 En cours |
+| `.worktrees/F10-app-bevy-ui` | `feature/F10-app-bevy-ui` | `feature_engineer` | F10 : Application Bevy 0.15 & UI Viewport | 🚀 En cours |
 
 ---
 
 ## 3. Matrice des tests d'intégration globaux
 
-- Dernier run workspace : `cargo test --workspace` sur `main` (`15a8a2a`)
-- Statut : ✅ **85 tests unitaires et d'intégration passés avec succès**, 0 avertissement clippy (`-D warnings`), `cargo fmt --check` validé.
+- Dernier run workspace : `cargo test --workspace` sur `main` (`f09985a`)
+- Statut : ✅ **102 tests unitaires et d'intégration passés avec succès**, 0 avertissement clippy (`-D warnings`), `cargo fmt --check` validé.
 
 ---
 
@@ -45,3 +45,7 @@ Dernière mise à jour : Clôture de la 2e vague parallèle (F06, F07, F08) & Pr
 1. **`HeroKnowledgeMap` :** Conflit de conception entre F06 (FOV cognitif, visibilité InSight/Explored/Unexplored) et F07 (registre d'exploration pour la guilde avec dalles et pièges). Arbitrage : fusion canonique dans `crates/tomb_of_heroes_core/src/topology/knowledge.rs` englobant le modèle complet de visibilité et les ensembles explorés/pièges pour le renseignement de guilde, réexporté proprement dans `intel::guild`.
 2. **Modules d'erreurs internes :** `mod error;` dans `necro/` et `topology/` scopés en `pub(crate) mod error;` afin d'éviter les collisions d'exports d'`Error` globales au niveau de `lib.rs`.
 3. **Contrôle anti-régression :** Exécution complète de `cargo test --workspace` (85/85 tests réussis).
+
+### Intégration du Jalon 2 (F09) :
+1. **Sérialisation déterministe de `CorpseRegistry` :** Correction de la sérialisation des clés non-chaînes (`GridCoord`) vers JSON par vectorisation ordonnée `(GridCoord, Vec<LogicId>)`.
+2. **Contrôle anti-régression :** 102/102 tests réussis dans le workspace (`cargo test --workspace`).
