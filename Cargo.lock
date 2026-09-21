@@ -4067,6 +4067,8 @@ dependencies = [
 name = "tomb_of_heroes_core"
 version = "0.1.0"
 dependencies = [
+ "base64",
+ "crc32fast",
  "rand_xoshiro",
  "serde",
  "serde_json",
