@@ -7,9 +7,11 @@ use bevy::ecs::system::{Res, ResMut, Resource};
 use bevy_egui::egui::{self, Color32, ProgressBar, RichText, Vec2};
 use bevy_egui::EguiContexts;
 
+use tomb_of_heroes_core::campaign::WavePhase;
 use tomb_of_heroes_core::chrono::memory::ChronoHero;
 use tomb_of_heroes_core::math::BasisPoints;
 use tomb_of_heroes_core::necro::{CorpseState, HeroClass};
+use tomb_of_heroes_core::rng::DungeonMasterSeed;
 use tomb_of_heroes_core::save::{
     export_to_base64_string, import_from_base64_string, pack_world, unpack_world,
     DEFAULT_CAMPAIGN_ID, DEFAULT_COMPRESSION_LEVEL,
@@ -49,6 +51,11 @@ pub struct HudState {
     pub save_export_text: String,
     pub save_import_text: String,
     pub save_feedback: Option<String>,
+    pub wave: u32,
+    pub max_waves: u32,
+    pub wave_phase: WavePhase,
+    pub heart_hp: u32,
+    pub heart_max_hp: u32,
 }
 
 impl Default for HudState {
@@ -66,6 +73,11 @@ impl Default for HudState {
             save_export_text: String::new(),
             save_import_text: String::new(),
             save_feedback: None,
+            wave: 1,
+            max_waves: 5,
+            wave_phase: WavePhase::Preparation,
+            heart_hp: 500,
+            heart_max_hp: 500,
         }
     }
 }
@@ -93,6 +105,7 @@ impl Plugin for HudPlugin {
                 hud_save_modal_system,
                 hud_inspector_panel_system,
                 hud_placement_execution_system,
+                hud_end_game_modal_system,
             ),
         );
     }
@@ -110,13 +123,25 @@ pub fn hud_status_bar_system(
 ) {
     let ctx = contexts.ctx_mut();
 
+    hud_state.mana = simulation.mana();
+    hud_state.max_mana = simulation.max_mana();
+    hud_state.infamy = simulation.campaign().infamy;
+    hud_state.wave = simulation.campaign().current_wave;
+    hud_state.max_waves = simulation.campaign().max_waves;
+    hud_state.wave_phase = simulation.campaign().phase;
+    hud_state.heart_hp = simulation.heart().current_hp;
+    hud_state.heart_max_hp = simulation.heart().max_hp;
+
     egui::TopBottomPanel::top("status_bar")
         .frame(egui::Frame::side_top_panel(&ctx.style()).inner_margin(8.0))
         .show(ctx, |ui| {
             ui.horizontal_wrapped(|ui| {
                 // Mana Gauge
-                let mana_ratio =
-                    (hud_state.mana as f32 / hud_state.max_mana as f32).clamp(0.0, 1.0);
+                let mana_ratio = if hud_state.max_mana > 0 {
+                    (hud_state.mana as f32 / hud_state.max_mana as f32).clamp(0.0, 1.0)
+                } else {
+                    0.0
+                };
                 ui.add(
                     ProgressBar::new(mana_ratio)
                         .text(format!("Mana: {}/{}", hud_state.mana, hud_state.max_mana))
@@ -133,6 +158,69 @@ pub fn hud_status_bar_system(
                 );
 
                 ui.separator();
+
+                // Wave & Phase Display
+                let (phase_str, phase_color) = match hud_state.wave_phase {
+                    WavePhase::Preparation => ("PRÉPARATION", Color32::from_rgb(0x5A, 0xC5, 0x4F)),
+                    WavePhase::Incursion => ("INCURSION", Color32::from_rgb(0xFF, 0x44, 0x44)),
+                    WavePhase::Debriefing => ("DÉBRIEFING", Color32::from_rgb(0xF4, 0xB4, 0x1B)),
+                    WavePhase::Victory => ("VICTOIRE", Color32::from_rgb(0x00, 0xE5, 0xFF)),
+                    WavePhase::Defeat => ("DÉFAITE", Color32::from_rgb(0xFF, 0x00, 0x00)),
+                };
+                ui.label(
+                    RichText::new(format!(
+                        "Vague {}/{} [{}]",
+                        hud_state.wave, hud_state.max_waves, phase_str
+                    ))
+                    .color(phase_color)
+                    .strong(),
+                );
+
+                ui.separator();
+
+                // Heart Health Gauge
+                let heart_ratio = if hud_state.heart_max_hp > 0 {
+                    (hud_state.heart_hp as f32 / hud_state.heart_max_hp as f32).clamp(0.0, 1.0)
+                } else {
+                    0.0
+                };
+                ui.add(
+                    ProgressBar::new(heart_ratio)
+                        .text(format!(
+                            "Cœur: {}/{} PV",
+                            hud_state.heart_hp, hud_state.heart_max_hp
+                        ))
+                        .desired_width(120.0),
+                );
+
+                ui.separator();
+
+                // Phase Action Button
+                if hud_state.wave_phase == WavePhase::Preparation {
+                    if ui
+                        .add(touch_btn(
+                            RichText::new("⚔ Lancer Incursion")
+                                .color(Color32::from_rgb(0xFF, 0xDD, 0x55))
+                                .strong(),
+                        ))
+                        .clicked()
+                    {
+                        simulation.world_mut().start_incursion();
+                    }
+                    ui.separator();
+                } else if hud_state.wave_phase == WavePhase::Debriefing {
+                    if ui
+                        .add(touch_btn(
+                            RichText::new("➡ Vague Suivante")
+                                .color(Color32::from_rgb(0x55, 0xFF, 0x55))
+                                .strong(),
+                        ))
+                        .clicked()
+                    {
+                        simulation.world_mut().campaign_mut().advance_to_next_wave();
+                    }
+                    ui.separator();
+                }
 
                 // Alert Level
                 let (alert_str, alert_color) = match hud_state.alert_level {
@@ -615,4 +703,133 @@ pub fn hud_placement_execution_system(
         }
         PlacementTool::None => {}
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Systems: End Game Modal (Victory / Defeat)
+// ─────────────────────────────────────────────────────────────────────────────
+
+pub fn hud_end_game_modal_system(
+    mut contexts: EguiContexts,
+    mut hud_state: ResMut<HudState>,
+    mut simulation: ResMut<WorldSimulation>,
+) {
+    let phase = simulation.campaign().phase;
+    if !matches!(phase, WavePhase::Victory | WavePhase::Defeat) {
+        return;
+    }
+
+    let ctx = contexts.ctx_mut();
+    let title = if phase == WavePhase::Victory {
+        "🏆 VICTOIRE DE CAMPAGNE"
+    } else {
+        "💀 DÉFAITE DU DONJON"
+    };
+
+    egui::Window::new(title)
+        .collapsible(false)
+        .resizable(false)
+        .anchor(egui::Align2::CENTER_CENTER, egui::Vec2::ZERO)
+        .show(ctx, |ui| {
+            ui.vertical_centered(|ui| {
+                if phase == WavePhase::Victory {
+                    ui.label(
+                        RichText::new("Le Maître de Guilde a été terrassé et le donjon triomphe !")
+                            .color(Color32::from_rgb(0x00, 0xE5, 0xFF))
+                            .size(16.0)
+                            .strong(),
+                    );
+                } else {
+                    ui.label(
+                        RichText::new("Le Cœur du Donjon a été anéanti par les aventuriers !")
+                            .color(Color32::from_rgb(0xFF, 0x44, 0x44))
+                            .size(16.0)
+                            .strong(),
+                    );
+                }
+            });
+
+            ui.add_space(8.0);
+            ui.separator();
+            ui.add_space(8.0);
+
+            let stats = &simulation.campaign().stats;
+            ui.label(RichText::new("📊 Bilan Récapitulatif :").strong());
+            ui.label(format!("• Vagues repoussées : {}", stats.waves_cleared));
+            ui.label(format!(
+                "• Héros éliminés au total : {}",
+                stats.heroes_killed_total
+            ));
+            for (class, count) in &stats.heroes_killed_by_class {
+                ui.label(format!("   - {class:?} : {count}"));
+            }
+            ui.label(format!(
+                "• Morts sous panique aveugle : {}",
+                stats.heroes_died_of_panic
+            ));
+            ui.label(format!(
+                "• Héros évadés : {} (dont {} indemnes)",
+                stats.heroes_escaped_total, stats.heroes_escaped_unhurt
+            ));
+            ui.label(format!(
+                "• Essence d'âme / mana récoltée : {}",
+                stats.mana_harvested_total
+            ));
+            ui.label(format!(
+                "• Gardiens morts-vivants créés : {}",
+                stats.corpses_converted_total
+            ));
+            ui.label(format!(
+                "• Rembobinages chronomantiques : {}",
+                stats.rewinds_performed
+            ));
+            ui.label(format!(
+                "• Paradoxe accumulé : {}",
+                stats.paradox_accumulated
+            ));
+            ui.label(format!(
+                "• Infamie finale : {}",
+                simulation.campaign().infamy
+            ));
+
+            ui.add_space(12.0);
+            ui.separator();
+            ui.add_space(12.0);
+
+            ui.horizontal(|ui| {
+                // Tactile Button: Restart Game (>= 44x44 pt)
+                if ui
+                    .add(touch_btn(
+                        RichText::new("🔄 Nouvelle Partie")
+                            .color(Color32::from_rgb(0x5A, 0xC5, 0x4F))
+                            .strong(),
+                    ))
+                    .clicked()
+                {
+                    let new_seed = simulation.current_tick().0.saturating_add(777);
+                    let cfg = simulation.config().clone();
+                    *simulation =
+                        WorldSimulation::from_config_and_seed(cfg, DungeonMasterSeed(new_seed));
+                }
+
+                // Tactile Button: Export Save Base64 (>= 44x44 pt)
+                if ui
+                    .add(touch_btn(
+                        RichText::new("📋 Exporter Sauvegarde")
+                            .color(Color32::LIGHT_BLUE)
+                            .strong(),
+                    ))
+                    .clicked()
+                {
+                    if let Ok(envelope) = pack_world(
+                        simulation.world(),
+                        DEFAULT_CAMPAIGN_ID,
+                        DEFAULT_COMPRESSION_LEVEL,
+                    ) {
+                        hud_state.save_export_text = export_to_base64_string(&envelope);
+                        hud_state.show_save_modal = true;
+                    }
+                }
+            });
+        });
 }

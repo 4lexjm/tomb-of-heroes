@@ -15,6 +15,7 @@
 
 extern crate alloc;
 
+pub mod campaign;
 pub mod chrono;
 pub mod combat;
 pub mod config;
@@ -29,6 +30,7 @@ pub mod time;
 pub mod topology;
 pub mod world;
 
+pub use campaign::*;
 pub use chrono::*;
 pub use combat::*;
 pub use config::*;

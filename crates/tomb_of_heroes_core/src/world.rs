@@ -8,12 +8,14 @@ use std::collections::{BTreeMap, BTreeSet};
 use rand_xoshiro::rand_core::RngCore;
 use serde::{Deserialize, Serialize};
 
+use crate::campaign::{DungeonHeart, ThreatDirector, WavePhase};
 use crate::chrono::command::CoreCommand;
 use crate::chrono::memory::{ChronoHero, HeroState};
 use crate::combat::{detect_trap, disarm_trap, execute_death_sequence, TrapType};
 use crate::config::GameConfig;
 use crate::hash::{StateHash, StateHasher};
 use crate::id::{LogicId, LogicIdError, LogicIdGenerator};
+use crate::intel::veterancy::VeteranProfile;
 use crate::math::BasisPoints;
 use crate::necro::corpse::CorpseState;
 use crate::necro::necromancy::UndeadMinion;
@@ -41,6 +43,8 @@ pub struct LogicWorld {
     minions: BTreeMap<LogicId, UndeadMinion>,
     mana: u32,
     max_mana: u32,
+    heart: DungeonHeart,
+    campaign: ThreatDirector,
 }
 
 impl LogicWorld {
@@ -59,6 +63,8 @@ impl LogicWorld {
             minions: BTreeMap::new(),
             mana: 100,
             max_mana: 200,
+            heart: DungeonHeart::default_sanctuary(),
+            campaign: ThreatDirector::new(),
         }
     }
 
@@ -202,6 +208,18 @@ impl LogicWorld {
             if is_escaped {
                 if let Some(h) = self.heroes.get_mut(&id) {
                     h.state = HeroState::Escaped;
+                    let profile = VeteranProfile::new(
+                        h.hero_id,
+                        h.hero_id.0,
+                        h.hero_class,
+                        h.rank,
+                        1,
+                        Vec::new(),
+                        h.trauma_traits.clone(),
+                        None,
+                    );
+                    self.campaign.escaped_veterans.push(profile);
+                    self.campaign.stats.record_escape(h.current_hp == h.max_hp);
                 }
                 continue;
             }
@@ -259,6 +277,10 @@ impl LogicWorld {
 
         // 4. Death sequence execution
         for dead_id in heroes_died {
+            if let Some(h) = self.heroes.get(&dead_id) {
+                let panicked = h.terror_bps.0 >= self.config.terror.blind_panic_threshold;
+                self.campaign.stats.record_kill(h.hero_class, panicked);
+            }
             let allies: Vec<LogicId> = self
                 .heroes
                 .keys()
@@ -278,9 +300,15 @@ impl LogicWorld {
                         .mana
                         .saturating_add(outcome.mana_harvested)
                         .min(self.max_mana);
+                    self.campaign
+                        .stats
+                        .record_mana_harvested(outcome.mana_harvested);
                 }
             }
         }
+
+        // 5. Campaign & Incursion progression
+        self.resolve_campaign_tick(current_tick_val);
     }
 
     /// Computes the deterministic 64-bit state hash of the world.
@@ -454,9 +482,153 @@ impl LogicWorld {
         self.mana
     }
 
+    /// Returns maximum available dungeon mana.
+    #[inline]
+    #[must_use]
+    pub const fn max_mana(&self) -> u32 {
+        self.max_mana
+    }
+
     /// Sets available dungeon mana.
     #[inline]
     pub fn set_mana(&mut self, mana: u32) {
         self.mana = mana.min(self.max_mana);
+    }
+
+    /// Returns an immutable reference to the Dungeon Heart entity.
+    #[inline]
+    #[must_use]
+    pub const fn heart(&self) -> &DungeonHeart {
+        &self.heart
+    }
+
+    /// Returns a mutable reference to the Dungeon Heart entity.
+    #[inline]
+    pub fn heart_mut(&mut self) -> &mut DungeonHeart {
+        &mut self.heart
+    }
+
+    /// Returns an immutable reference to the Campaign Threat Director.
+    #[inline]
+    #[must_use]
+    pub const fn campaign(&self) -> &ThreatDirector {
+        &self.campaign
+    }
+
+    /// Returns a mutable reference to the Campaign Threat Director.
+    #[inline]
+    pub fn campaign_mut(&mut self) -> &mut ThreatDirector {
+        &mut self.campaign
+    }
+
+    /// Initiates an expedition incursion for the current campaign wave.
+    pub fn start_incursion(&mut self) {
+        if self.campaign.phase != WavePhase::Preparation {
+            return;
+        }
+        let spawn_coord = WorldCoord::new(FloorId(0), GridCoord::new(1, 1));
+        let target_dest = self.heart.position;
+        let squad =
+            self.campaign
+                .generate_wave_squad(&mut self.id_generator, spawn_coord, target_dest);
+        for hero in squad {
+            self.heroes.insert(hero.hero_id, hero);
+        }
+        self.campaign.phase = WavePhase::Incursion;
+        self.campaign.preparation_ticks_remaining = None;
+    }
+
+    /// Processes campaign wave progression, heart assaults, and victory/defeat evaluations.
+    fn resolve_campaign_tick(&mut self, current_tick: u64) {
+        match self.campaign.phase {
+            WavePhase::Preparation => {
+                if let Some(ref mut remaining) = self.campaign.preparation_ticks_remaining {
+                    if *remaining > 0 {
+                        *remaining = remaining.saturating_sub(1);
+                    }
+                    if *remaining == 0 {
+                        self.start_incursion();
+                    }
+                }
+            }
+            WavePhase::Incursion => {
+                // Check heroes assaulting the Dungeon Heart (SPEC-REQ-WAVE-003)
+                let heart_pos = self.heart.position;
+                let mut heart_damage: u32 = 0;
+                for hero in self.heroes.values() {
+                    if hero.position == heart_pos
+                        && hero.current_hp > 0
+                        && matches!(
+                            hero.state,
+                            HeroState::Infiltrating | HeroState::Alerted | HeroState::Engaged
+                        )
+                    {
+                        // 10 damage / second = 1 damage every 2 ticks at 20 Hz
+                        if current_tick.is_multiple_of(2) {
+                            heart_damage = heart_damage.saturating_add(1);
+                        }
+                    }
+                }
+                if heart_damage > 0 {
+                    self.heart.take_damage(heart_damage);
+                }
+
+                // Defeat condition check (SPEC-REQ-WAVE-003)
+                if self.heart.is_destroyed() {
+                    self.campaign.phase = WavePhase::Defeat;
+                    return;
+                }
+
+                // Check resolution of incursion (SPEC-REQ-WAVE-001 & SPEC-REQ-WAVE-004)
+                if self.campaign.active_incursion_heroes_count > 0 {
+                    let living_count = self
+                        .heroes
+                        .values()
+                        .filter(|h| {
+                            h.current_hp > 0
+                                && matches!(
+                                    h.state,
+                                    HeroState::Infiltrating
+                                        | HeroState::Alerted
+                                        | HeroState::Engaged
+                                        | HeroState::Fleeing
+                                )
+                        })
+                        .count();
+
+                    if living_count == 0 {
+                        let killed = self
+                            .heroes
+                            .values()
+                            .filter(|h| matches!(h.state, HeroState::Dead))
+                            .count() as u32;
+                        let panic_deaths = self
+                            .heroes
+                            .values()
+                            .filter(|h| {
+                                matches!(h.state, HeroState::Dead)
+                                    && h.terror_bps.0 >= self.config.terror.blind_panic_threshold
+                            })
+                            .count() as u32;
+                        let escaped_unhurt = self
+                            .heroes
+                            .values()
+                            .filter(|h| {
+                                matches!(h.state, HeroState::Escaped) && h.current_hp == h.max_hp
+                            })
+                            .count() as u32;
+
+                        self.campaign.phase = WavePhase::Debriefing;
+                        self.campaign
+                            .apply_wave_infamy(killed, panic_deaths, escaped_unhurt);
+
+                        if self.campaign.check_victory_condition() {
+                            self.campaign.phase = WavePhase::Victory;
+                        }
+                    }
+                }
+            }
+            WavePhase::Debriefing | WavePhase::Victory | WavePhase::Defeat => {}
+        }
     }
 }

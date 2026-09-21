@@ -222,4 +222,9 @@ path = "tests/m3_necro/test_trap_and_combat_resolution.rs"
 name = "test_simulation_tick_and_hero_ai"
 path = "tests/m1_arch/test_simulation_tick_and_hero_ai.rs"
 
+[[test]]
+name = "test_campaign_waves_and_victory"
+path = "tests/m4_intel/test_campaign_waves_and_victory.rs"
+
+
 

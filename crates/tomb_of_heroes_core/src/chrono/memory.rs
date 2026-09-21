@@ -7,6 +7,7 @@ use std::collections::BTreeSet;
 use serde::{Deserialize, Serialize};
 
 use crate::id::LogicId;
+use crate::intel::veterancy::TraumaTrait;
 use crate::math::BasisPoints;
 use crate::necro::terror::Bravery;
 use crate::necro::HeroClass;
@@ -128,6 +129,12 @@ pub struct ChronoHero {
     pub ticks_since_repath: u32,
     /// Current navigation goal coordinate.
     pub target_destination: Option<WorldCoord>,
+    /// Progression rank (1 to 5).
+    pub rank: u8,
+    /// Acquired psychological trauma traits.
+    pub trauma_traits: Vec<TraumaTrait>,
+    /// Flag indicating whether this hero is a guild expedition boss.
+    pub is_boss: bool,
 }
 
 impl ChronoHero {
@@ -165,6 +172,9 @@ impl ChronoHero {
             next_move_tick: 0,
             ticks_since_repath: 0,
             target_destination: None,
+            rank: 1,
+            trauma_traits: Vec::new(),
+            is_boss: false,
         }
     }
 
@@ -236,6 +246,9 @@ impl ChronoHero {
     /// Returns the courage fortitude level of this hero archetype.
     #[must_use]
     pub fn bravery(&self) -> Bravery {
+        if self.is_boss {
+            return Bravery::ABSOLUTE;
+        }
         match self.hero_class {
             HeroClass::Rogue | HeroClass::Mage => Bravery::NOVICE,
             HeroClass::Warrior | HeroClass::Cleric => Bravery::HARDENED,

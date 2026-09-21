@@ -32,6 +32,14 @@ fn test_hud_initial_state_and_tools() {
     assert!(!hud.is_paused);
     assert!(!hud.show_chrono_window);
     assert!(!hud.show_save_modal);
+    assert_eq!(hud.wave, 1);
+    assert_eq!(hud.max_waves, 5);
+    assert_eq!(
+        hud.wave_phase,
+        tomb_of_heroes_core::campaign::WavePhase::Preparation
+    );
+    assert_eq!(hud.heart_hp, 500);
+    assert_eq!(hud.heart_max_hp, 500);
 }
 
 #[test]
