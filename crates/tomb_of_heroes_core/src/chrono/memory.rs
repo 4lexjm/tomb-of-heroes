@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::id::LogicId;
 use crate::math::BasisPoints;
+use crate::necro::terror::Bravery;
 use crate::necro::HeroClass;
 use crate::topology::WorldCoord;
 
@@ -67,9 +68,28 @@ impl ChronoMemory {
     }
 }
 
+/// Behavioral state of an active adventurer hero in the dungeon.
+///
+/// Specified in `SPEC-REQ-SIM-002`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub enum HeroState {
+    /// Nominal incursion exploring towards objective (stairs or heart).
+    Infiltrating,
+    /// Heightened vigilance due to detected traps or nearby corpses.
+    Alerted,
+    /// Active physical combat with a defender minion.
+    Engaged,
+    /// Uncontrolled or tactical rout retreating towards surface exit.
+    Fleeing,
+    /// Hero has perished and undergone corpse transformation.
+    Dead,
+    /// Hero has successfully exited the dungeon with knowledge.
+    Escaped,
+}
+
 /// Adventurer entity state with temporal awareness and residual memory.
 ///
-/// Specified in `SPEC-REQ-CHRONO-003`.
+/// Specified in `SPEC-REQ-CHRONO-003` and `SPEC-REQ-SIM-002`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ChronoHero {
     /// Stable entity identifier.
@@ -98,6 +118,16 @@ pub struct ChronoHero {
     pub is_alerted: bool,
     /// Flag indicating active tactical or blind panic retreat towards exit.
     pub is_fleeing: bool,
+    /// Current FSM behavioral state.
+    pub state: HeroState,
+    /// Planned navigation trajectory on the discrete navmesh.
+    pub path: Vec<WorldCoord>,
+    /// Simulation tick timestamp when the next step may occur.
+    pub next_move_tick: u64,
+    /// Ticks elapsed since last A* path recalculation.
+    pub ticks_since_repath: u32,
+    /// Current navigation goal coordinate.
+    pub target_destination: Option<WorldCoord>,
 }
 
 impl ChronoHero {
@@ -130,6 +160,11 @@ impl ChronoHero {
             is_leader: false,
             is_alerted: false,
             is_fleeing: false,
+            state: HeroState::Infiltrating,
+            path: Vec::new(),
+            next_move_tick: 0,
+            ticks_since_repath: 0,
+            target_destination: None,
         }
     }
 
@@ -177,5 +212,34 @@ impl ChronoHero {
     #[must_use]
     pub const fn is_shield_active(&self) -> bool {
         self.has_preemptive_shield
+    }
+
+    /// Returns the discrete tick interval duration required between movements.
+    ///
+    /// Implements `SPEC-REQ-SIM-002`.
+    #[must_use]
+    pub fn move_cooldown_ticks(&self) -> u64 {
+        let base_ticks: u64 = match self.hero_class {
+            HeroClass::Rogue => 6,
+            HeroClass::Warrior | HeroClass::Cleric => 10,
+            HeroClass::Mage | HeroClass::Paladin => 12,
+        };
+        if self.is_alerted || matches!(self.state, HeroState::Alerted) {
+            (base_ticks * 15 + 5) / 10
+        } else if self.is_fleeing || matches!(self.state, HeroState::Fleeing) {
+            ((base_ticks * 10 + 7) / 15).max(3)
+        } else {
+            base_ticks
+        }
+    }
+
+    /// Returns the courage fortitude level of this hero archetype.
+    #[must_use]
+    pub fn bravery(&self) -> Bravery {
+        match self.hero_class {
+            HeroClass::Rogue | HeroClass::Mage => Bravery::NOVICE,
+            HeroClass::Warrior | HeroClass::Cleric => Bravery::HARDENED,
+            HeroClass::Paladin => Bravery::INQUISITOR,
+        }
     }
 }

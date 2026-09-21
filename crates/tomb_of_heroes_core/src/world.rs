@@ -5,21 +5,27 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use rand_xoshiro::rand_core::RngCore;
 use serde::{Deserialize, Serialize};
 
 use crate::chrono::command::CoreCommand;
-use crate::chrono::memory::ChronoHero;
+use crate::chrono::memory::{ChronoHero, HeroState};
+use crate::combat::{detect_trap, disarm_trap, execute_death_sequence, TrapType};
 use crate::config::GameConfig;
 use crate::hash::{StateHash, StateHasher};
 use crate::id::{LogicId, LogicIdError, LogicIdGenerator};
+use crate::math::BasisPoints;
+use crate::necro::corpse::CorpseState;
+use crate::necro::necromancy::UndeadMinion;
+use crate::necro::terror::{compute_terror_accumulation_with_config, PanicLevel};
 use crate::necro::CorpseRegistry;
-use crate::rng::{DeterministicRngBank, DungeonMasterSeed};
+use crate::rng::{DeterministicRngBank, DungeonMasterSeed, RngStreamKind};
 use crate::time::Tick;
-use crate::topology::{FloorId, GridCoord, WorldCoord};
+use crate::topology::{DungeonGrid, FloorId, GridCoord, WorldCoord};
 
 /// Deterministic, headless simulation state of Tomb of Heroes.
 ///
-/// Specified in `docs/specs/01_architecture_determinisme.md`.
+/// Specified in `docs/specs/01_architecture_determinisme.md` and `docs/specs/08_simulation_ia_heros.md`.
 /// Orchestrates discrete ticks, stable entity IDs, decoupled PRNG streams,
 /// gameplay configuration, and cryptographic state hashing.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -31,6 +37,10 @@ pub struct LogicWorld {
     corpses: CorpseRegistry,
     heroes: BTreeMap<LogicId, ChronoHero>,
     hazards: BTreeSet<WorldCoord>,
+    dungeon: DungeonGrid,
+    minions: BTreeMap<LogicId, UndeadMinion>,
+    mana: u32,
+    max_mana: u32,
 }
 
 impl LogicWorld {
@@ -45,6 +55,10 @@ impl LogicWorld {
             corpses: CorpseRegistry::new(),
             heroes: BTreeMap::new(),
             hazards: BTreeSet::new(),
+            dungeon: DungeonGrid::new(),
+            minions: BTreeMap::new(),
+            mana: 100,
+            max_mana: 200,
         }
     }
 
@@ -57,9 +71,216 @@ impl LogicWorld {
 
     /// Advances the simulation by exactly one fixed discrete tick.
     ///
-    /// Monotonically increments `current_tick`.
+    /// Implements `SPEC-REQ-SIM-001` through `SPEC-REQ-SIM-004`.
     pub fn step(&mut self) {
         self.current_tick.advance();
+        let current_tick_val = self.current_tick.as_u64();
+
+        // Natural mana regeneration (+1 every 10 ticks)
+        if current_tick_val.is_multiple_of(10) {
+            self.mana = self.mana.saturating_add(1).min(self.max_mana);
+        }
+
+        // Advance corpse decay
+        self.corpses.tick_decay_all();
+
+        // 1. Perception, Terror accumulation, and FSM update for all heroes
+        let hero_ids: Vec<LogicId> = self.heroes.keys().copied().collect();
+        let mut heroes_died: Vec<LogicId> = Vec::new();
+
+        for &id in &hero_ids {
+            if let Some(hero) = self.heroes.get_mut(&id) {
+                if hero.current_hp == 0
+                    || matches!(hero.state, HeroState::Dead | HeroState::Escaped)
+                {
+                    continue;
+                }
+
+                // Terror from nearby corpses
+                let mut terror_delta: u32 = 0;
+                for (_cid, coord, corpse) in self.corpses.iter() {
+                    let dist = hero.position.coord.chebyshev_distance(coord);
+                    if dist <= 6 && corpse.state != CorpseState::Destroyed {
+                        let bravery = hero.bravery();
+                        terror_delta =
+                            terror_delta.saturating_add(compute_terror_accumulation_with_config(
+                                dist,
+                                corpse.base_terror_potency,
+                                bravery,
+                                &self.config,
+                            ));
+                    }
+                }
+                if terror_delta > 0 {
+                    hero.apply_paradox_anxiety(BasisPoints(terror_delta.min(10_000)));
+                }
+
+                // FSM transitions based on terror
+                if hero.terror_bps.0 >= self.config.terror.blind_panic_threshold {
+                    hero.state = HeroState::Fleeing;
+                    hero.is_fleeing = true;
+                } else if hero.terror_bps.0 >= self.config.terror.shaken_threshold
+                    && hero.state == HeroState::Infiltrating
+                {
+                    hero.state = HeroState::Alerted;
+                    hero.is_alerted = true;
+                }
+            }
+        }
+
+        // 2. Locomotion along A* navmesh
+        let mut occupied_tiles: BTreeMap<WorldCoord, LogicId> = BTreeMap::new();
+        for (&id, hero) in &self.heroes {
+            if hero.current_hp > 0 && !matches!(hero.state, HeroState::Dead | HeroState::Escaped) {
+                occupied_tiles.insert(hero.position, id);
+            }
+        }
+
+        for &id in &hero_ids {
+            let (can_move, next_coord, is_escaped) = {
+                let hero = match self.heroes.get_mut(&id) {
+                    Some(h) => h,
+                    None => continue,
+                };
+                if hero.current_hp == 0
+                    || matches!(
+                        hero.state,
+                        HeroState::Dead | HeroState::Escaped | HeroState::Engaged
+                    )
+                {
+                    continue;
+                }
+
+                hero.ticks_since_repath = hero.ticks_since_repath.saturating_add(1);
+
+                if current_tick_val < hero.next_move_tick {
+                    continue;
+                }
+
+                let target = if hero.is_fleeing {
+                    WorldCoord::new(FloorId(0), GridCoord::new(1, 1))
+                } else {
+                    hero.target_destination
+                        .unwrap_or_else(|| WorldCoord::new(FloorId(0), GridCoord::new(10, 10)))
+                };
+
+                if hero.path.is_empty() || hero.ticks_since_repath >= 60 {
+                    if let Ok(new_path) =
+                        self.dungeon
+                            .find_path(hero.position, target, &self.config.topology)
+                    {
+                        if new_path.len() > 1 {
+                            hero.path = new_path[1..].to_vec();
+                            hero.ticks_since_repath = 0;
+                        }
+                    }
+                }
+
+                if let Some(&next) = hero.path.first() {
+                    let is_blocked = match occupied_tiles.get(&next) {
+                        Some(&other_id) => other_id < id,
+                        None => false,
+                    };
+
+                    if is_blocked {
+                        continue;
+                    }
+
+                    let escaped = hero.is_fleeing
+                        && hero.position.floor == FloorId(0)
+                        && hero.position.coord == GridCoord::new(1, 1);
+
+                    (true, next, escaped)
+                } else {
+                    let escaped = hero.is_fleeing
+                        && hero.position.floor == FloorId(0)
+                        && hero.position.coord == GridCoord::new(1, 1);
+                    (false, hero.position, escaped)
+                }
+            };
+
+            if is_escaped {
+                if let Some(h) = self.heroes.get_mut(&id) {
+                    h.state = HeroState::Escaped;
+                }
+                continue;
+            }
+
+            if can_move {
+                let hero = match self.heroes.get_mut(&id) {
+                    Some(h) => h,
+                    None => continue,
+                };
+                let old_pos = hero.position;
+                hero.position = next_coord;
+                if !hero.path.is_empty() {
+                    hero.path.remove(0);
+                }
+                hero.next_move_tick = current_tick_val.saturating_add(hero.move_cooldown_ticks());
+
+                occupied_tiles.remove(&old_pos);
+                occupied_tiles.insert(next_coord, id);
+
+                // 3. Traps & Hazards
+                if self.hazards.contains(&next_coord) {
+                    let is_fleeing = hero.is_fleeing;
+                    let panic = if hero.terror_bps.0 >= self.config.terror.blind_panic_threshold {
+                        PanicLevel::BlindPanic
+                    } else {
+                        PanicLevel::Serene
+                    };
+
+                    let roll = BasisPoints(
+                        (self.rng_bank.stream_mut(RngStreamKind::Combat).next_u64() % 10_000)
+                            as u32,
+                    );
+                    let detected = detect_trap(hero.hero_class, hero.is_alerted, panic, roll);
+                    let disarmed = if detected {
+                        let disarm_roll = BasisPoints(
+                            (self.rng_bank.stream_mut(RngStreamKind::Combat).next_u64() % 10_000)
+                                as u32,
+                        );
+                        disarm_trap(hero.hero_class, disarm_roll)
+                    } else {
+                        false
+                    };
+
+                    if !disarmed {
+                        let trap_res = TrapType::Spikes.resolve_damage(is_fleeing, hero.armor_bps);
+                        hero.current_hp = hero.current_hp.saturating_sub(trap_res.damage);
+                        if hero.current_hp == 0 {
+                            hero.state = HeroState::Dead;
+                            heroes_died.push(id);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 4. Death sequence execution
+        for dead_id in heroes_died {
+            let allies: Vec<LogicId> = self
+                .heroes
+                .keys()
+                .copied()
+                .filter(|&k| k != dead_id)
+                .collect();
+            if let Ok(corpse_id) = self.id_generator.allocate() {
+                if let Ok(outcome) = execute_death_sequence(
+                    dead_id,
+                    &mut self.heroes,
+                    &mut self.corpses,
+                    corpse_id,
+                    &self.config,
+                    &allies,
+                ) {
+                    self.mana = self
+                        .mana
+                        .saturating_add(outcome.mana_harvested)
+                        .min(self.max_mana);
+                }
+            }
+        }
     }
 
     /// Computes the deterministic 64-bit state hash of the world.
@@ -198,5 +419,44 @@ impl LogicWorld {
                 // High-level command, executed via execute_rewind
             }
         }
+    }
+
+    /// Returns an immutable reference to the dungeon topology.
+    #[inline]
+    #[must_use]
+    pub const fn dungeon(&self) -> &DungeonGrid {
+        &self.dungeon
+    }
+
+    /// Returns a mutable reference to the dungeon topology.
+    #[inline]
+    pub fn dungeon_mut(&mut self) -> &mut DungeonGrid {
+        &mut self.dungeon
+    }
+
+    /// Returns an immutable reference to active minions.
+    #[inline]
+    #[must_use]
+    pub const fn minions(&self) -> &BTreeMap<LogicId, UndeadMinion> {
+        &self.minions
+    }
+
+    /// Returns a mutable reference to active minions.
+    #[inline]
+    pub fn minions_mut(&mut self) -> &mut BTreeMap<LogicId, UndeadMinion> {
+        &mut self.minions
+    }
+
+    /// Returns current available dungeon mana.
+    #[inline]
+    #[must_use]
+    pub const fn mana(&self) -> u32 {
+        self.mana
+    }
+
+    /// Sets available dungeon mana.
+    #[inline]
+    pub fn set_mana(&mut self, mana: u32) {
+        self.mana = mana.min(self.max_mana);
     }
 }

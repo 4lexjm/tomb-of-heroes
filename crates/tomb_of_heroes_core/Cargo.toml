@@ -218,4 +218,8 @@ path = "tests/m2_topo/test_procedural_dungeon_generation.rs"
 name = "test_trap_and_combat_resolution"
 path = "tests/m3_necro/test_trap_and_combat_resolution.rs"
 
+[[test]]
+name = "test_simulation_tick_and_hero_ai"
+path = "tests/m1_arch/test_simulation_tick_and_hero_ai.rs"
+
 

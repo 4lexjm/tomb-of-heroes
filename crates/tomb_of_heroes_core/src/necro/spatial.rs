@@ -209,4 +209,11 @@ impl CorpseRegistry {
             .iter()
             .map(|(&id, (coord, corpse))| (id, *coord, corpse))
     }
+
+    /// Advances natural decay by one tick across all tracked corpses.
+    pub fn tick_decay_all(&mut self) {
+        for (_coord, corpse) in self.corpses.values_mut() {
+            corpse.tick_decay();
+        }
+    }
 }
