@@ -55,3 +55,36 @@ path = "tests/m5_chrono/test_action_journal_truncation.rs"
 [[test]]
 name = "test_action_journal_serde"
 path = "tests/m5_chrono/test_action_journal_serde.rs"
+
+[[test]]
+name = "test_corpse_spawn_on_kill"
+path = "tests/m3_necro/test_corpse_spawn_on_kill.rs"
+
+[[test]]
+name = "test_terror_accumulation_by_distance"
+path = "tests/m3_necro/test_terror_accumulation_by_distance.rs"
+
+[[test]]
+name = "test_panic_level_transitions"
+path = "tests/m3_necro/test_panic_level_transitions.rs"
+
+[[test]]
+name = "test_raise_skeleton_consumes_corpse"
+path = "tests/m3_necro/test_raise_skeleton_consumes_corpse.rs"
+
+[[test]]
+name = "test_cleric_sanctification"
+path = "tests/m3_necro/test_cleric_sanctification.rs"
+
+[[test]]
+name = "test_corpse_stack_slide_at_capacity_3"
+path = "tests/m3_necro/test_corpse_stack_slide_at_capacity_3.rs"
+
+[[test]]
+name = "test_terror_clamp_at_10_000"
+path = "tests/m3_necro/test_terror_clamp_at_10_000.rs"
+
+[[test]]
+name = "test_macabre_explosion"
+path = "tests/m3_necro/test_macabre_explosion.rs"
+

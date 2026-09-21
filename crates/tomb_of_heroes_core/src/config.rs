@@ -43,6 +43,12 @@ pub struct CorpseConfig {
     pub nominal_structural_hp: u32,
     /// Hit points threshold below which a corpse is considered Damaged (25 HP).
     pub damaged_threshold_hp: u32,
+    /// Default soul essence harvested from an intact corpse (25 essence).
+    pub default_soul_essence: u32,
+    /// Default base terror potency projected by an intact corpse (5_000 BPS = 50.00%).
+    pub default_terror_potency: BasisPoints,
+    /// Default decay ticks before corpse rots away (1_200 ticks = 60 seconds).
+    pub default_decay_ticks: u32,
 }
 
 impl Default for CorpseConfig {
@@ -51,6 +57,9 @@ impl Default for CorpseConfig {
             max_per_tile: 3,
             nominal_structural_hp: 50,
             damaged_threshold_hp: 25,
+            default_soul_essence: 25,
+            default_terror_potency: BasisPoints(5_000),
+            default_decay_ticks: 1_200,
         }
     }
 }
@@ -68,6 +77,10 @@ pub struct TerrorConfig {
     pub blind_panic_threshold: u32,
     /// Maximum terror gauge capacity (10_000 points / 100.00%).
     pub max_points: u32,
+    /// Maximum Chebyshev distance for corpse terror projection (5 tiles).
+    pub max_projection_distance: u32,
+    /// Simulation tick frequency used for terror accumulation normalization (20 Hz).
+    pub tick_rate_hz: u32,
 }
 
 impl Default for TerrorConfig {
@@ -77,6 +90,43 @@ impl Default for TerrorConfig {
             disrupted_threshold: 6_000,
             blind_panic_threshold: 8_500,
             max_points: 10_000,
+            max_projection_distance: 5,
+            tick_rate_hz: 20,
+        }
+    }
+}
+
+/// Asymmetric necromancy parameters, mana costs, and macabre explosion.
+///
+/// Specified in `SPEC-REQ-NECRO-003` and `SPEC-REQ-NECRO-004`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct NecroConfig {
+    /// Dark Mana cost to raise a Skeleton Guardian (40 Mana).
+    pub skeleton_mana_cost: u32,
+    /// Dark Mana cost to raise a Flesh-Wall Zombie (60 Mana).
+    pub zombie_mana_cost: u32,
+    /// Dark Mana cost to raise a Fallen Soul Spectre (80 Mana).
+    pub spectre_mana_cost: u32,
+    /// Direct damage dealt by Macabre Explosion (80 HP).
+    pub explosion_damage: u32,
+    /// Instant terror inflicted by Macabre Explosion (2_000 BPS = 20.00%).
+    pub explosion_terror_potency: BasisPoints,
+    /// Radius of Macabre Explosion in Chebyshev distance (2 tiles).
+    pub explosion_radius: u32,
+    /// Channel duration in ticks for cleric sanctification (60 ticks = 3.0s).
+    pub sanctify_channel_ticks: u32,
+}
+
+impl Default for NecroConfig {
+    fn default() -> Self {
+        Self {
+            skeleton_mana_cost: 40,
+            zombie_mana_cost: 60,
+            spectre_mana_cost: 80,
+            explosion_damage: 80,
+            explosion_terror_potency: BasisPoints(2_000),
+            explosion_radius: 2,
+            sanctify_channel_ticks: 60,
         }
     }
 }
@@ -160,6 +210,8 @@ pub struct GameConfig {
     pub corpse: CorpseConfig,
     /// Terror psychological thresholds.
     pub terror: TerrorConfig,
+    /// Necromancy spells, costs, and minion parameters.
+    pub necro: NecroConfig,
     /// Adventurer tactical retreat parameters.
     pub retreat: RetreatConfig,
     /// Chronomancy snapshots and temporal mana costs.
@@ -175,6 +227,7 @@ impl Default for GameConfig {
             standard_bps: BasisPoints::STANDARD,
             corpse: CorpseConfig::default(),
             terror: TerrorConfig::default(),
+            necro: NecroConfig::default(),
             retreat: RetreatConfig::default(),
             chrono: ChronoConfig::default(),
             viewport: ViewportConfig::default(),
