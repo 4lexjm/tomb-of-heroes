@@ -41,9 +41,9 @@ jobs:
       - name: Validate Cross-Compilation (iOS Core target)
         run: |
           rustup target add aarch64-apple-ios
-          cargo check --target aarch64-apple-ios --package tomb_of_heroes_core
+          SDKROOT=/tmp CRATE_CC_NO_DEFAULTS=1 CC_aarch64_apple_ios=gcc AR_aarch64_apple_ios=ar cargo check --target aarch64-apple-ios --package tomb_of_heroes_core
 
       - name: Validate Cross-Compilation (Android Core target)
         run: |
           rustup target add aarch64-linux-android
-          cargo check --target aarch64-linux-android --package tomb_of_heroes_core
+          CRATE_CC_NO_DEFAULTS=1 CC_aarch64_linux_android=gcc AR_aarch64_linux_android=ar cargo check --target aarch64-linux-android --package tomb_of_heroes_core
