@@ -2,7 +2,19 @@
 
 > *You are not the hero. You are the dungeon.*
 
-A deterministic, reverse dungeon-crawler where you design, maintain, and evolve a tactical keep to stop increasingly organized incursions of adventuring parties — who remember their deaths, learn from them, and come back stronger.
+A deterministic, reverse dungeon-crawler for **Android & iOS** (solo, offline). You design, maintain, and evolve a tactical keep to stop increasingly organized incursions of adventuring parties — who remember their deaths, learn from them, and come back stronger.
+
+---
+
+## Platforms
+
+| Platform | Status |
+|---|---|
+| 🤖 Android | Primary target |
+| 🍎 iOS / iPadOS | Primary target |
+| 🖥️ Desktop (Linux / macOS / Windows) | Development & CI only |
+
+The game is designed for **portrait and landscape touch screens**, from 4:3 tablets (iPad) to 21:9 ultra-wide smartphones. All saves are offline-first and transferable between devices via clipboard (Base64 armor).
 
 ---
 
@@ -10,7 +22,7 @@ A deterministic, reverse dungeon-crawler where you design, maintain, and evolve 
 
 In most dungeon games, you are the hero raiding a keep. In **Tomb of Heroes**, you are the dungeon master — but the heroes fight back smarter each time. Fallen adventurers become undead pawns. Survivors carry trauma traits that change their behavior. Veterans return with vengeance.
 
-The game is built on a **fully deterministic simulation core** with no floating-point arithmetic, meaning every run is exactly reproducible from its seed and command history.
+The game is built on a **fully deterministic simulation core** with no floating-point arithmetic, meaning every run is exactly reproducible from its seed and command history — critical for cross-device save integrity on mobile.
 
 ---
 
@@ -42,20 +54,23 @@ The game is built on a **fully deterministic simulation core** with no floating-
 - The engine replays commands from the `ActionJournal` deterministically — the state is cryptographically verified via `StateHash` after every rewind.
 - Heroes with **ChronoAwareness** retain `ChronoMemory` of hazards from the erased timeline (anticipated hazard tiles, paradox terror bonus).
 
-### 💾 Save System
-- Saves are compact binary envelopes: `TOHS` magic header, Zstd-compressed payload, CRC32 integrity check, and `StateHash` post-load verification.
-- Portable export as **Base64 armor** (clipboard / cross-device transfer):
+### 💾 Save System — Mobile-First Design
+Designed for the constraints of Android and iOS protected storage and clipboard transfer:
+- Saves are compact binary envelopes: `TOHS` magic header, **Zstd level 3** compressed payload (fast on mobile CPU), CRC32 integrity check, and `StateHash` post-load verification.
+- Portable export as **Base64 armor** for clipboard / cross-device transfer between phones and tablets:
   ```
   -----BEGIN TOMB OF HEROES SAVE-----
   VE9IUwEA...
   -----END TOMB OF HEROES SAVE-----
   ```
+- The release binary uses `opt-level = "z"` + `lto = "fat"` + `strip = true` to minimize APK/IPA size.
 
 ### 🖥️ Pixel-Perfect Multi-Ratio Rendering
+Designed for the full range of mobile screen ratios (iPad 4:3 to tall smartphone 21:9):
 - Virtual canvas: **240 px tall** (fixed), **320–560 px wide** (4:3 to 21:9).
-- Integer scaling: $S = \max(1, \min(\lfloor W_\text{phys} / W_\text{target} \rfloor, \lfloor H_\text{phys} / 240 \rfloor))$.
-- A **320×240 Safe Zone** is guaranteed to contain all critical HUD elements on every screen ratio.
-- Letterboxing/pillarboxing fills remaining physical pixels.
+- Integer scaling: $S = \max(1, \min(\lfloor W_\text{phys} / W_\text{target} \rfloor, \lfloor H_\text{phys} / 240 \rfloor))$ — eliminates pixel shimmering on high-DPI mobile screens.
+- A **320×240 Safe Zone** is guaranteed to contain all critical HUD elements (mana bar, terror alerts, action buttons) regardless of screen ratio.
+- Letterboxing/pillarboxing fills remaining pixels; hardware notches and iOS home bar insets are translated to logical padding.
 
 ---
 
@@ -70,7 +85,7 @@ tomb-of-heroes/
 │   │   └── src/
 │   │       ├── math.rs        # BasisPoints arithmetic (zero float)
 │   │       ├── config.rs      # GameConfig (single source of truth)
-│   │       ├── time.rs        # Tick(u64) fixed clock
+│   │       ├── time.rs        # Tick(u64) fixed 20 Hz clock
 │   │       ├── id.rs          # LogicId stable identifiers
 │   │       ├── rng.rs         # Xoshiro256++ decoupled PRNG bank
 │   │       ├── hash.rs        # StateHash cryptographic fingerprint
@@ -84,8 +99,8 @@ tomb-of-heroes/
 │   └── tomb_of_heroes_app/    # Bevy 0.15 application host
 │       └── src/
 │           ├── viewport/      # Integer scaling, SafeZone, ViewportGeometry
-│           ├── simulation/    # FixedTickAccumulator, WorldSimulation, Bevy systems
-│           └── plugin/        # SimulationPlugin, ViewportPlugin, TombOfHeroesAppPlugin
+│           ├── simulation/    # FixedTickAccumulator (20 Hz, max 5 ticks/frame)
+│           └── plugin/        # SimulationPlugin, ViewportPlugin
 │
 ├── assets/
 │   └── balance.json           # Live-tweakable balance parameters
@@ -102,6 +117,7 @@ tomb-of-heroes/
 | Zero magic numbers | All constants sourced from `GameConfig` |
 | Zero `unsafe` code | `#![forbid(unsafe_code)]` |
 | Clippy clean | CI: `cargo clippy --workspace --all-targets -- -D warnings` |
+| Release binary size | `opt-level = "z"`, `lto = "fat"`, `strip = true`, `panic = "abort"` |
 
 ---
 
@@ -117,12 +133,13 @@ tomb-of-heroes/
 | Integrity | `crc32fast` (IEEE 802.3) |
 | Serialization | `serde` + `serde_json` |
 | Unique IDs | `uuid` v4 |
+| Mobile build | `cargo-apk` (Android) / `cargo-bundle` + Xcode (iOS) |
 
 ---
 
 ## Test Coverage
 
-**113 tests** across all modules, organized by milestone:
+**113 tests** across all modules, all headless (no window, no GPU required):
 
 | Suite | Tests | Domain |
 |---|---|---|
@@ -143,26 +160,20 @@ cargo test --workspace   # → 113/113 passed, 0 warnings
 ## Development
 
 ```bash
-# Clone
 git clone https://github.com/4lexjm/tomb-of-heroes
 cd tomb-of-heroes
 
-# Run all tests
 cargo test --workspace
-
-# Lint
 cargo clippy --workspace --all-targets -- -D warnings
-
-# Format check
 cargo fmt --check
 
-# Useful aliases (defined in .cargo/config.toml)
+# Aliases (.cargo/config.toml)
 cargo check-core   # cargo check -p tomb_of_heroes_core
 cargo check-app    # cargo check -p tomb_of_heroes_app
 cargo lint-all     # clippy -D warnings on all targets
 ```
 
-See [QUICKSTART.md](QUICKSTART.md) to build and run the game immediately.
+See [QUICKSTART.md](QUICKSTART.md) to build for Android, iOS, or desktop.
 
 ---
 

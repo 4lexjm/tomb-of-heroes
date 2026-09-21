@@ -1,29 +1,127 @@
 # Quickstart — Tomb of Heroes
 
-Get the game running in under 5 minutes.
+Get the game running on your device. The primary targets are **Android** and **iOS** — desktop builds are available for development and testing.
 
 ---
 
 ## Prerequisites
 
-### 1. Install Rust
+### Rust toolchain
 
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source "$HOME/.cargo/env"
 ```
 
-Minimum supported version: **Rust 1.80** (stable). The project was built and tested on Rust **1.98**.
+Minimum supported version: **Rust 1.80** (stable). Built and tested on Rust **1.98**.
 
-Verify:
 ```bash
 rustc --version   # rustc 1.98.x or later
-cargo --version
 ```
 
-### 2. System dependencies (Linux)
+---
 
-Bevy requires a few native libraries for windowing and audio:
+## 🤖 Android
+
+### 1. Install dependencies
+
+```bash
+# Android SDK + NDK (via Android Studio recommended)
+# Then install the Rust Android targets:
+rustup target add \
+  aarch64-linux-android \
+  armv7-linux-androideabi \
+  x86_64-linux-android
+
+# Install cargo-apk
+cargo install cargo-apk
+```
+
+Set your SDK/NDK paths (adjust versions to match your install):
+
+```bash
+export ANDROID_SDK_ROOT="$HOME/Android/Sdk"
+export ANDROID_NDK_ROOT="$ANDROID_SDK_ROOT/ndk/26.1.10909125"
+```
+
+### 2. Build the APK
+
+```bash
+# Debug APK
+cargo apk build -p tomb_of_heroes_app
+
+# Release APK (optimized: opt-level=z, LTO, stripped)
+cargo apk build -p tomb_of_heroes_app --release
+```
+
+The APK is output to `target/release/apk/tomb_of_heroes_app.apk`.
+
+### 3. Install & run on a connected device
+
+```bash
+# Connect an Android device with USB debugging enabled, then:
+cargo apk run -p tomb_of_heroes_app --release
+```
+
+Or install the APK manually:
+```bash
+adb install target/release/apk/tomb_of_heroes_app.apk
+```
+
+---
+
+## 🍎 iOS / iPadOS
+
+### 1. Requirements
+
+- macOS with **Xcode 15+** installed
+- Apple Developer account (free tier works for device sideloading)
+
+### 2. Install dependencies
+
+```bash
+# iOS targets
+rustup target add \
+  aarch64-apple-ios \
+  aarch64-apple-ios-sim \
+  x86_64-apple-ios
+
+# cargo-bundle for Xcode project generation
+cargo install cargo-bundle
+```
+
+### 3. Build for iOS Simulator
+
+```bash
+cargo build -p tomb_of_heroes_app \
+  --target aarch64-apple-ios-sim \
+  --release
+```
+
+### 4. Build for physical device
+
+```bash
+cargo build -p tomb_of_heroes_app \
+  --target aarch64-apple-ios \
+  --release
+```
+
+Then generate the `.app` bundle and open in Xcode to sign and deploy:
+
+```bash
+cargo bundle --target aarch64-apple-ios --release
+open target/aarch64-apple-ios/release/bundle/ios/tomb_of_heroes_app.app
+```
+
+> Xcode handles code signing. Select your development team under *Signing & Capabilities* and click *Run* to install on a connected iPhone or iPad.
+
+---
+
+## 🖥️ Desktop (Development & CI)
+
+Desktop builds are used for local development, running tests, and CI. They are **not the shipping target**.
+
+### System dependencies (Linux only)
 
 ```bash
 # Ubuntu / Debian
@@ -31,7 +129,7 @@ sudo apt-get install -y \
   libasound2-dev libudev-dev libx11-dev libxkbcommon-dev \
   libwayland-dev libxrandr-dev pkg-config
 
-# Fedora / RHEL
+# Fedora
 sudo dnf install -y \
   alsa-lib-devel libudev-devel libX11-devel libxkbcommon-devel \
   wayland-devel libXrandr-devel pkg-config
@@ -41,116 +139,59 @@ sudo pacman -S --needed \
   alsa-lib systemd-libs libx11 libxkbcommon wayland libxrandr pkg-config
 ```
 
-> **macOS / Windows:** No additional native dependencies required. Rust's toolchain is self-contained on those platforms.
+> **macOS / Windows:** No additional dependencies.
 
----
-
-## Clone & Build
+### Build & run
 
 ```bash
-git clone https://github.com/4lexjm/tomb-of-heroes
-cd tomb-of-heroes
-
-# Development build (fast compile, debug symbols)
-cargo build -p tomb_of_heroes_app
-
-# Release build (optimized for size — LTO, strip, panic=abort)
-cargo build -p tomb_of_heroes_app --release
+cargo run -p tomb_of_heroes_app           # debug
+cargo run -p tomb_of_heroes_app --release # release
 ```
 
 ---
 
-## Run
+## ✅ Verify the build
 
-```bash
-# From source (debug)
-cargo run -p tomb_of_heroes_app
-
-# From source (release)
-cargo run -p tomb_of_heroes_app --release
-
-# Or run the compiled binary directly
-./target/release/tomb_of_heroes_app        # Linux / macOS
-.\target\release\tomb_of_heroes_app.exe   # Windows
-```
-
-The window opens at your native resolution. The engine automatically computes the highest integer scaling factor that fits the **320×240 Safe Zone** without distortion.
-
----
-
-## Verify the Build
-
-Run the full test suite to confirm everything is working:
+Run the full test suite (headless, no window, no device required):
 
 ```bash
 cargo test --workspace
 # Expected: 113 tests, 0 failures, 0 warnings
 ```
 
+All tests in `tomb_of_heroes_core` are pure headless. App tests use `MinimalPlugins` — no GPU or screen needed.
+
 ---
 
-## Useful Commands
+## Useful commands
 
 ```bash
 # Lint (zero warnings policy)
 cargo clippy --workspace --all-targets -- -D warnings
 
-# Format check
+# Format
 cargo fmt --check
+cargo fmt          # auto-fix
 
-# Auto-format
-cargo fmt
-
-# Check only (no artifact output, fastest feedback)
-cargo check-core   # checks tomb_of_heroes_core
-cargo check-app    # checks tomb_of_heroes_app
-```
-
-> These aliases are defined in [`.cargo/config.toml`](.cargo/config.toml).
-
----
-
-## Headless (No Window)
-
-The simulation core runs entirely without a window. You can drive it programmatically:
-
-```rust
-use tomb_of_heroes_core::{GameConfig, LogicWorld};
-use tomb_of_heroes_core::rng::DungeonMasterSeed;
-
-let config = GameConfig::default();
-let mut world = LogicWorld::new(config, DungeonMasterSeed(12345));
-
-for _ in 0..20 {
-    world.step(); // advance one fixed tick (50 ms)
-}
-
-println!("Tick: {:?}", world.current_tick()); // Tick(20)
-println!("Hash: {:?}", world.state_hash());
-```
-
-Or run tests without any display:
-
-```bash
-cargo test -p tomb_of_heroes_core   # pure headless, no window needed
-cargo test -p tomb_of_heroes_app    # Bevy MinimalPlugins, also headless
+# Aliases (defined in .cargo/config.toml)
+cargo check-core   # cargo check -p tomb_of_heroes_core
+cargo check-app    # cargo check -p tomb_of_heroes_app
+cargo lint-all     # clippy -D warnings
 ```
 
 ---
 
-## Save & Export
+## Save transfer between devices
 
-Saves are binary envelopes compressed with Zstd. Export a save as portable Base64 text:
+Saves are exportable as a plain-text Base64 block — paste it into a message, email, or cloud note to transfer between your phone and tablet:
 
-```rust
-use tomb_of_heroes_core::save::{pack_world, export_to_base64_armor};
-
-let envelope = pack_world(&world, campaign_id, 3)?;
-let armored  = export_to_base64_armor(&envelope);
-// → "-----BEGIN TOMB OF HEROES SAVE-----\n...\n-----END TOMB OF HEROES SAVE-----"
+```
+-----BEGIN TOMB OF HEROES SAVE-----
+VE9IUwEA...
+-----END TOMB OF HEROES SAVE-----
 ```
 
-Paste the armor block anywhere (clipboard, file, pastebin) to transfer your run between devices.
+The game verifies CRC32 integrity and `StateHash` on import, so a corrupted or tampered block is rejected before any state is mutated.
 
 ---
 
@@ -159,7 +200,9 @@ Paste the armor block anywhere (clipboard, file, pastebin) to transfer your run 
 | Issue | Fix |
 |---|---|
 | `cargo: command not found` | Run `source "$HOME/.cargo/env"` or restart your shell |
-| Linker errors on Linux | Install the system dependencies listed above |
-| Black screen / no window | Ensure your GPU driver supports Vulkan or OpenGL 3.3+ |
-| `DISPLAY` / Wayland errors in CI | Use `WINIT_UNIX_BACKEND=x11` or run headless tests (`cargo test -p tomb_of_heroes_core`) |
-| Slow first build | Bevy compiles many dependencies; subsequent builds are cached and fast |
+| `cargo-apk` build fails | Verify `ANDROID_SDK_ROOT` and `ANDROID_NDK_ROOT` are set and point to matching NDK r23+ |
+| iOS: code signing error | Open in Xcode, set your Team under *Signing & Capabilities* |
+| iOS Simulator: `arch` mismatch | Use `aarch64-apple-ios-sim` for Apple Silicon Macs, `x86_64-apple-ios` for Intel |
+| Linux desktop: linker errors | Install the system dependencies listed above |
+| Black screen on device | Ensure Vulkan/GLES3 is supported; check `adb logcat` for Bevy/wgpu errors |
+| Slow first build | Bevy compiles many dependencies on first build; subsequent builds use the cache and are fast |
