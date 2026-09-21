@@ -20,6 +20,8 @@ serde_json = "1.0"
 zstd = "0.13"
 rand_xoshiro = "0.6"
 uuid = { version = "1.10", features = ["v4", "serde"] }
+crc32fast = "1.4"
+base64 = "0.21"
 
 # Moteur Bevy 0.15 et intégration UI (réservé au conteneur applicatif app)
 bevy = { version = "0.15", default-features = false, features = [

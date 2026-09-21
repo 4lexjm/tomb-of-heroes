@@ -32,7 +32,34 @@ pub struct CorpseRegistry {
     /// Corpse instances indexed by their stable LogicId and current grid position.
     corpses: BTreeMap<LogicId, (GridCoord, Corpse)>,
     /// Corpse identifiers present on each tile.
+    #[serde(with = "tile_corpses_serde")]
     tile_corpses: BTreeMap<GridCoord, Vec<LogicId>>,
+}
+
+mod tile_corpses_serde {
+    use super::*;
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    pub fn serialize<S>(
+        map: &BTreeMap<GridCoord, Vec<LogicId>>,
+        serializer: S,
+    ) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let vec: Vec<(&GridCoord, &Vec<LogicId>)> = map.iter().collect();
+        vec.serialize(serializer)
+    }
+
+    pub fn deserialize<'de, D>(
+        deserializer: D,
+    ) -> Result<BTreeMap<GridCoord, Vec<LogicId>>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let vec: Vec<(GridCoord, Vec<LogicId>)> = Vec::deserialize(deserializer)?;
+        Ok(vec.into_iter().collect())
+    }
 }
 
 impl CorpseRegistry {

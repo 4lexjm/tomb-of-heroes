@@ -12,6 +12,8 @@ serde_json = { workspace = true }
 zstd = { workspace = true }
 rand_xoshiro = { workspace = true, features = ["serde1"] }
 uuid = { workspace = true }
+crc32fast = { workspace = true }
+base64 = { workspace = true }
 
 [lints]
 workspace = true
@@ -187,5 +189,25 @@ path = "tests/m2_topo/test_frontier_exhaustion_returns_none.rs"
 [[test]]
 name = "test_door_state_discrepancy_rediscovery"
 path = "tests/m2_topo/test_door_state_discrepancy_rediscovery.rs"
+
+[[test]]
+name = "test_save_envelope_roundtrip_zstd"
+path = "tests/m6_save/test_save_envelope_roundtrip_zstd.rs"
+
+[[test]]
+name = "test_crc32_corruption_detection"
+path = "tests/m6_save/test_crc32_corruption_detection.rs"
+
+[[test]]
+name = "test_base64_export_string_formatting"
+path = "tests/m6_save/test_base64_export_string_formatting.rs"
+
+[[test]]
+name = "test_save_magic_header_invalid"
+path = "tests/m6_save/test_save_magic_header_invalid.rs"
+
+[[test]]
+name = "test_empty_save_payload"
+path = "tests/m6_save/test_empty_save_payload.rs"
 
 
