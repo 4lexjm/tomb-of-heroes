@@ -21,6 +21,7 @@ pub mod math;
 pub mod necro;
 pub mod rng;
 pub mod time;
+pub mod topology;
 pub mod world;
 
 pub use chrono::*;
@@ -31,4 +32,5 @@ pub use math::*;
 pub use necro::*;
 pub use rng::*;
 pub use time::*;
+pub use topology::*;
 pub use world::*;

@@ -10,47 +10,7 @@ use crate::id::LogicId;
 use crate::necro::corpse::Corpse;
 use crate::necro::error::NecroError;
 
-/// Discrete 2D integer grid coordinates on a dungeon floor.
-///
-/// Specified in `SPEC-REQ-TOPO-001`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub struct GridCoord {
-    /// Horizontal tile coordinate.
-    pub x: i32,
-    /// Vertical tile coordinate.
-    pub y: i32,
-}
-
-impl GridCoord {
-    /// Creates a new coordinate pair.
-    #[inline]
-    #[must_use]
-    pub const fn new(x: i32, y: i32) -> Self {
-        Self { x, y }
-    }
-
-    /// Chebyshev distance: $\max(|x_1 - x_2|, |y_1 - y_2|)$.
-    ///
-    /// Used for 8-directional vision, area-of-effect spells, and terror projection.
-    #[inline]
-    #[must_use]
-    pub fn chebyshev_distance(self, other: Self) -> u32 {
-        let dx = (self.x - other.x).unsigned_abs();
-        let dy = (self.y - other.y).unsigned_abs();
-        dx.max(dy)
-    }
-
-    /// Manhattan distance: $|x_1 - x_2| + |y_1 - y_2|$.
-    ///
-    /// Used for 4-directional orthogonal movement.
-    #[inline]
-    #[must_use]
-    pub fn manhattan_distance(self, other: Self) -> u32 {
-        let dx = (self.x - other.x).unsigned_abs();
-        let dy = (self.y - other.y).unsigned_abs();
-        dx.saturating_add(dy)
-    }
-}
+pub use crate::topology::GridCoord;
 
 /// Ordered 8-directional neighbor offsets for deterministic sliding resolution.
 const SLIDE_OFFSETS: [(i32, i32); 8] = [

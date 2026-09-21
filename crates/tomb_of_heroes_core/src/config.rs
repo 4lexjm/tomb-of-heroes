@@ -197,6 +197,50 @@ impl Default for ViewportConfig {
     }
 }
 
+/// Discrete 2.5D topology and navigation parameters.
+///
+/// Specified in `SPEC-REQ-TOPO-001`, `SPEC-REQ-TOPO-002`, and `SPEC-REQ-TOPO-005`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TopologyConfig {
+    /// Nominal duration to traverse stairs in ticks (40 ticks = 2.0 s).
+    pub stairs_traversal_ticks: u64,
+    /// Duration to traverse a ladder in ticks (80 ticks = 4.0 s).
+    pub ladder_traversal_ticks: u64,
+    /// Duration to fall through a pitfall in ticks (5 ticks = 0.25 s).
+    pub pitfall_traversal_ticks: u64,
+    /// Duration to traverse a one-way magical portal in ticks (10 ticks = 0.5 s).
+    pub portal_traversal_ticks: u64,
+    /// Vulnerability penalty when climbing a ladder in basis points (+25% = 2_500 BPS).
+    pub ladder_vulnerability_bps: BasisPoints,
+    /// Nominal cost in ticks to move orthogonally between adjacent tiles (10 ticks).
+    pub orthogonal_step_cost: u32,
+    /// Base fall damage per floor dropped for pitfall transitions.
+    pub base_fall_damage: u32,
+    /// Distance weight in frontier utility calculation (150 BPS/tile).
+    pub frontier_distance_weight_bps: BasisPoints,
+    /// Terror miasma weight in frontier utility calculation (200 BPS/point).
+    pub frontier_terror_weight_bps: BasisPoints,
+    /// Room area heuristic weight in frontier utility calculation (50 BPS/tile).
+    pub frontier_room_weight_bps: BasisPoints,
+}
+
+impl Default for TopologyConfig {
+    fn default() -> Self {
+        Self {
+            stairs_traversal_ticks: 40,
+            ladder_traversal_ticks: 80,
+            pitfall_traversal_ticks: 5,
+            portal_traversal_ticks: 10,
+            ladder_vulnerability_bps: BasisPoints(2_500),
+            orthogonal_step_cost: 10,
+            base_fall_damage: 20,
+            frontier_distance_weight_bps: BasisPoints(150),
+            frontier_terror_weight_bps: BasisPoints(200),
+            frontier_room_weight_bps: BasisPoints(50),
+        }
+    }
+}
+
 /// Master gameplay and engine configuration structure.
 ///
 /// Aggregates all domain subsystems configuration without magic numbers.
@@ -218,6 +262,8 @@ pub struct GameConfig {
     pub chrono: ChronoConfig,
     /// Viewport Safe Zone dimensions.
     pub viewport: ViewportConfig,
+    /// Discrete 2.5D topology and navigation configuration.
+    pub topology: TopologyConfig,
 }
 
 impl Default for GameConfig {
@@ -231,6 +277,7 @@ impl Default for GameConfig {
             retreat: RetreatConfig::default(),
             chrono: ChronoConfig::default(),
             viewport: ViewportConfig::default(),
+            topology: TopologyConfig::default(),
         }
     }
 }

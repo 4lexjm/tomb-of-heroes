@@ -88,3 +88,15 @@ path = "tests/m3_necro/test_terror_clamp_at_10_000.rs"
 name = "test_macabre_explosion"
 path = "tests/m3_necro/test_macabre_explosion.rs"
 
+[[test]]
+name = "test_metric_distances"
+path = "tests/m2_topo/test_metric_distances.rs"
+
+[[test]]
+name = "test_vertical_transition_pitfall_one_way"
+path = "tests/m2_topo/test_vertical_transition_pitfall_one_way.rs"
+
+[[test]]
+name = "test_astar_navigation"
+path = "tests/m2_topo/test_astar_navigation.rs"
+

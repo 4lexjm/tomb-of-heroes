@@ -38,6 +38,15 @@ fn test_game_config_default_instantiation_and_constants() {
     // 7. Safe Zone dimensions (320 x 240)
     assert_eq!(config.viewport.safe_zone_width, 320);
     assert_eq!(config.viewport.safe_zone_height, 240);
+
+    // 8. Discrete 2.5D Topology parameters
+    assert_eq!(config.topology.stairs_traversal_ticks, 40);
+    assert_eq!(config.topology.ladder_traversal_ticks, 80);
+    assert_eq!(config.topology.pitfall_traversal_ticks, 5);
+    assert_eq!(config.topology.portal_traversal_ticks, 10);
+    assert_eq!(config.topology.ladder_vulnerability_bps, BasisPoints(2_500));
+    assert_eq!(config.topology.orthogonal_step_cost, 10);
+    assert_eq!(config.topology.base_fall_damage, 20);
 }
 
 #[test]

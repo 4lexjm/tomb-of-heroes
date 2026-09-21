@@ -33,16 +33,7 @@ pub enum GateState {
     Locked,
 }
 
-/// Archetypes of undead minions that can be raised from fallen corpses.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub enum UndeadKind {
-    /// Basic animated skeleton warrior with melee capability.
-    SkeletonGuardian,
-    /// Bulky reanimated corpse acting as a damage sponge.
-    FleshWallZombie,
-    /// Incorporeal phantom disrupting adventurer morale and line of sight.
-    FallenSoulSpectre,
-}
+pub use crate::necro::UndeadKind;
 
 /// Core domain gameplay mutations initiated by the Dungeon Master or scripts.
 ///
