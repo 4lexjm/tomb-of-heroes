@@ -3,14 +3,19 @@
 //! Composes discrete fixed-tick clock, stable ID generator, decoupled PRNG bank,
 //! engine gameplay configuration, and cryptographic state hashing.
 
+use std::collections::{BTreeMap, BTreeSet};
+
 use serde::{Deserialize, Serialize};
 
+use crate::chrono::command::CoreCommand;
+use crate::chrono::memory::ChronoHero;
 use crate::config::GameConfig;
 use crate::hash::{StateHash, StateHasher};
 use crate::id::{LogicId, LogicIdError, LogicIdGenerator};
 use crate::necro::CorpseRegistry;
 use crate::rng::{DeterministicRngBank, DungeonMasterSeed};
 use crate::time::Tick;
+use crate::topology::{FloorId, GridCoord, WorldCoord};
 
 /// Deterministic, headless simulation state of Tomb of Heroes.
 ///
@@ -24,6 +29,8 @@ pub struct LogicWorld {
     rng_bank: DeterministicRngBank,
     config: GameConfig,
     corpses: CorpseRegistry,
+    heroes: BTreeMap<LogicId, ChronoHero>,
+    hazards: BTreeSet<WorldCoord>,
 }
 
 impl LogicWorld {
@@ -36,6 +43,8 @@ impl LogicWorld {
             rng_bank: DeterministicRngBank::new(seed),
             config,
             corpses: CorpseRegistry::new(),
+            heroes: BTreeMap::new(),
+            hazards: BTreeSet::new(),
         }
     }
 
@@ -118,5 +127,76 @@ impl LogicWorld {
     #[inline]
     pub fn corpses_mut(&mut self) -> &mut CorpseRegistry {
         &mut self.corpses
+    }
+
+    /// Registers a hero into the simulation world.
+    pub fn register_hero(&mut self, hero: ChronoHero) {
+        self.heroes.insert(hero.hero_id, hero);
+    }
+
+    /// Returns a reference to a hero by identifier, if present.
+    #[must_use]
+    pub fn hero(&self, id: LogicId) -> Option<&ChronoHero> {
+        self.heroes.get(&id)
+    }
+
+    /// Returns a mutable reference to a hero by identifier, if present.
+    pub fn hero_mut(&mut self, id: LogicId) -> Option<&mut ChronoHero> {
+        self.heroes.get_mut(&id)
+    }
+
+    /// Returns an immutable reference to the heroes registry.
+    #[inline]
+    #[must_use]
+    pub const fn heroes(&self) -> &BTreeMap<LogicId, ChronoHero> {
+        &self.heroes
+    }
+
+    /// Returns a mutable reference to the heroes registry.
+    #[inline]
+    pub fn heroes_mut(&mut self) -> &mut BTreeMap<LogicId, ChronoHero> {
+        &mut self.heroes
+    }
+
+    /// Records an environmental hazard at the specified world coordinate.
+    pub fn record_hazard(&mut self, coord: WorldCoord) {
+        self.hazards.insert(coord);
+    }
+
+    /// Checks whether an environmental hazard exists at the coordinate.
+    #[must_use]
+    pub fn is_hazard(&self, coord: &WorldCoord) -> bool {
+        self.hazards.contains(coord)
+    }
+
+    /// Returns an immutable reference to all tracked hazards.
+    #[inline]
+    #[must_use]
+    pub const fn hazards(&self) -> &BTreeSet<WorldCoord> {
+        &self.hazards
+    }
+
+    /// Applies a discrete gameplay command mutation to the world.
+    pub fn apply_command(&mut self, command: &CoreCommand) {
+        match command {
+            CoreCommand::ArmTrap { floor, x, y, .. } => {
+                let coord = WorldCoord::new(FloorId(*floor), GridCoord::new(*x, *y));
+                self.hazards.insert(coord);
+            }
+            CoreCommand::TriggerTrapManual { .. } => {
+                // Trap mechanism trigger
+            }
+            CoreCommand::TogglePortcullis { .. } => {
+                // Portcullis state transition
+            }
+            CoreCommand::RaiseCorpse { corpse_id, .. } => {
+                if let Some(corpse) = self.corpses.get_corpse_mut(*corpse_id) {
+                    corpse.state = crate::necro::CorpseState::Destroyed;
+                }
+            }
+            CoreCommand::ChannelTemporalRewind { .. } => {
+                // High-level command, executed via execute_rewind
+            }
+        }
     }
 }

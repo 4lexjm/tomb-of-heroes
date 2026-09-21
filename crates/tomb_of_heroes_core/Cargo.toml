@@ -100,3 +100,31 @@ path = "tests/m2_topo/test_vertical_transition_pitfall_one_way.rs"
 name = "test_astar_navigation"
 path = "tests/m2_topo/test_astar_navigation.rs"
 
+[[test]]
+name = "test_snapshot_capture_cadence"
+path = "tests/m5_chrono/test_snapshot_capture_cadence.rs"
+
+[[test]]
+name = "test_deterministic_rewind_replay"
+path = "tests/m5_chrono/test_deterministic_rewind_replay.rs"
+
+[[test]]
+name = "test_rewind_mana_cost"
+path = "tests/m5_chrono/test_rewind_mana_cost.rs"
+
+[[test]]
+name = "test_chrono_aware_adaptation"
+path = "tests/m5_chrono/test_chrono_aware_adaptation.rs"
+
+[[test]]
+name = "test_rewind_past_oldest_snapshot_error"
+path = "tests/m5_chrono/test_rewind_past_oldest_snapshot_error.rs"
+
+[[test]]
+name = "test_rewind_with_zero_mana_fails"
+path = "tests/m5_chrono/test_rewind_with_zero_mana_fails.rs"
+
+[[test]]
+name = "test_future_command_truncation"
+path = "tests/m5_chrono/test_future_command_truncation.rs"
+

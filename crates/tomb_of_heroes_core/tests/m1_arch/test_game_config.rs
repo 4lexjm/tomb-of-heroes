@@ -34,6 +34,7 @@ fn test_game_config_default_instantiation_and_constants() {
     assert_eq!(config.chrono.ring_buffer_capacity, 12);
     assert_eq!(config.chrono.rewind_base_cost_mana, 20);
     assert_eq!(config.chrono.rewind_tick_cost_bps, BasisPoints(500));
+    assert_eq!(config.chrono.paradox_terror_bps, BasisPoints(500));
 
     // 7. Safe Zone dimensions (320 x 240)
     assert_eq!(config.viewport.safe_zone_width, 320);

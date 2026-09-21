@@ -164,6 +164,8 @@ pub struct ChronoConfig {
     pub rewind_base_cost_mana: u32,
     /// Mana cost factor per 100 ticks rewound in basis points (500 BPS).
     pub rewind_tick_cost_bps: BasisPoints,
+    /// Paradoxical terror inflicted on non-aware allies after a rewind (+500 BPS).
+    pub paradox_terror_bps: BasisPoints,
 }
 
 impl Default for ChronoConfig {
@@ -173,6 +175,7 @@ impl Default for ChronoConfig {
             ring_buffer_capacity: 12,
             rewind_base_cost_mana: 20,
             rewind_tick_cost_bps: BasisPoints(500),
+            paradox_terror_bps: BasisPoints(500),
         }
     }
 }
