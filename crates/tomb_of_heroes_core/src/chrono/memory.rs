@@ -86,6 +86,18 @@ pub struct ChronoHero {
     pub terror_bps: BasisPoints,
     /// Preemptive magical shield activated in response to anticipated hazards.
     pub has_preemptive_shield: bool,
+    /// Current remaining hit points.
+    pub current_hp: u32,
+    /// Nominal maximum hit points.
+    pub max_hp: u32,
+    /// Armor physical damage mitigation in basis points (e.g. 3000 = 30%).
+    pub armor_bps: BasisPoints,
+    /// Flag indicating whether this hero is the party leader.
+    pub is_leader: bool,
+    /// Flag indicating active vigilance / alertness (+2000 BPS trap detection).
+    pub is_alerted: bool,
+    /// Flag indicating active tactical or blind panic retreat towards exit.
+    pub is_fleeing: bool,
 }
 
 impl ChronoHero {
@@ -97,6 +109,13 @@ impl ChronoHero {
         has_chrono_awareness: bool,
         position: WorldCoord,
     ) -> Self {
+        let (base_hp, base_armor) = match hero_class {
+            HeroClass::Warrior => (100, BasisPoints(3000)),
+            HeroClass::Cleric => (80, BasisPoints(2000)),
+            HeroClass::Paladin => (120, BasisPoints(4000)),
+            HeroClass::Mage => (60, BasisPoints(1000)),
+            HeroClass::Rogue => (70, BasisPoints(1500)),
+        };
         Self {
             hero_id,
             hero_class,
@@ -105,6 +124,12 @@ impl ChronoHero {
             position,
             terror_bps: BasisPoints::ZERO,
             has_preemptive_shield: false,
+            current_hp: base_hp,
+            max_hp: base_hp,
+            armor_bps: base_armor,
+            is_leader: false,
+            is_alerted: false,
+            is_fleeing: false,
         }
     }
 

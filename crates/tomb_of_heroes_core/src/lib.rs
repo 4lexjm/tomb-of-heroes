@@ -16,6 +16,7 @@
 extern crate alloc;
 
 pub mod chrono;
+pub mod combat;
 pub mod config;
 pub mod hash;
 pub mod id;
@@ -29,6 +30,7 @@ pub mod topology;
 pub mod world;
 
 pub use chrono::*;
+pub use combat::*;
 pub use config::*;
 pub use hash::*;
 pub use id::*;

@@ -20,6 +20,12 @@ pub enum TrapType {
     Fire,
     /// Noxious vapor emitter causing persistent damage over time.
     PoisonGas,
+    /// Chemical acid pool reducing armor permanently.
+    Acid,
+    /// Heavy overhead portcullis crushing victims upon trigger.
+    Portcullis,
+    /// Concealed wall darts launching poisoned projectiles.
+    Darts,
 }
 
 /// Logical state of portcullises and reinforced doors.

@@ -186,7 +186,7 @@ fn try_generate_single_dungeon(
                 } else if h > config.min_room_dim * 2 + 2 {
                     true
                 } else {
-                    rng.next_u64() % 2 == 0
+                    rng.next_u64().is_multiple_of(2)
                 };
 
                 if split_horizontal && h > config.min_room_dim * 2 + 2 {
@@ -311,7 +311,12 @@ fn try_generate_single_dungeon(
         for (_, i, j) in corridor_edges {
             let start = rooms[i].center();
             let end = rooms[j].center();
-            carve_l_corridor(&mut floor_grid, start, end, rng.next_u64() % 2 == 0);
+            carve_l_corridor(
+                &mut floor_grid,
+                start,
+                end,
+                rng.next_u64().is_multiple_of(2),
+            );
         }
 
         dungeon_grid.add_floor(floor_grid);
