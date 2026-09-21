@@ -4,7 +4,6 @@
 
 pub mod corpse;
 pub(crate) mod error;
-
 pub mod necromancy;
 pub mod spatial;
 pub mod terror;

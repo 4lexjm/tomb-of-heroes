@@ -160,4 +160,32 @@ path = "tests/m4_intel/test_false_confidence_trap_penalty_application.rs"
 name = "test_guild_roster_overflow_eviction_policy"
 path = "tests/m4_intel/test_guild_roster_overflow_eviction_policy.rs"
 
+[[test]]
+name = "test_shadowcasting_occlusion"
+path = "tests/m2_topo/test_shadowcasting_occlusion.rs"
+
+[[test]]
+name = "test_semi_opaque_attenuation"
+path = "tests/m2_topo/test_semi_opaque_attenuation.rs"
+
+[[test]]
+name = "test_knowledge_map_fog_transitions"
+path = "tests/m2_topo/test_knowledge_map_fog_transitions.rs"
+
+[[test]]
+name = "test_frontier_selection_utility"
+path = "tests/m2_topo/test_frontier_selection_utility.rs"
+
+[[test]]
+name = "test_fov_grid_boundaries_no_panic"
+path = "tests/m2_topo/test_fov_grid_boundaries_no_panic.rs"
+
+[[test]]
+name = "test_frontier_exhaustion_returns_none"
+path = "tests/m2_topo/test_frontier_exhaustion_returns_none.rs"
+
+[[test]]
+name = "test_door_state_discrepancy_rediscovery"
+path = "tests/m2_topo/test_door_state_discrepancy_rediscovery.rs"
+
 

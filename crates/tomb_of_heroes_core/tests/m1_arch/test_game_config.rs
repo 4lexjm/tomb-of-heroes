@@ -48,6 +48,17 @@ fn test_game_config_default_instantiation_and_constants() {
     assert_eq!(config.topology.ladder_vulnerability_bps, BasisPoints(2_500));
     assert_eq!(config.topology.orthogonal_step_cost, 10);
     assert_eq!(config.topology.base_fall_damage, 20);
+    assert_eq!(
+        config.topology.frontier_distance_weight_bps,
+        BasisPoints(150)
+    );
+    assert_eq!(config.topology.frontier_terror_weight_bps, BasisPoints(200));
+    assert_eq!(config.topology.frontier_room_weight_bps, BasisPoints(50));
+    assert_eq!(
+        config.topology.frontier_base_utility_bps,
+        BasisPoints(10_000)
+    );
+    assert_eq!(config.topology.semi_opaque_range_penalty, 3);
 }
 
 #[test]

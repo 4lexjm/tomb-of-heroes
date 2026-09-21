@@ -43,32 +43,7 @@ impl IntelConfidence {
     }
 }
 
-/// Mental topological map and trap observations acquired by an adventurer.
-#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
-pub struct HeroKnowledgeMap {
-    /// Explored floor and grid tiles.
-    pub explored_tiles: BTreeSet<WorldCoord>,
-    /// Identified and cataloged traps.
-    pub identified_traps: BTreeMap<WorldCoord, TrapType>,
-}
-
-impl HeroKnowledgeMap {
-    /// Creates an empty mental knowledge map.
-    #[must_use]
-    pub fn new() -> Self {
-        Self::default()
-    }
-
-    /// Records an explored tile.
-    pub fn explore_tile(&mut self, coord: WorldCoord) {
-        self.explored_tiles.insert(coord);
-    }
-
-    /// Records an identified trap.
-    pub fn identify_trap(&mut self, coord: WorldCoord, trap: TrapType) {
-        self.identified_traps.insert(coord, trap);
-    }
-}
+pub use crate::topology::HeroKnowledgeMap;
 
 /// Intelligence record for an identified dungeon trap.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
