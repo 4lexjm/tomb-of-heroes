@@ -5,3 +5,6 @@ lint-all = "clippy --workspace --all-targets -- -D warnings"
 
 [build]
 target-dir = "target"
+
+[env]
+IPHONEOS_DEPLOYMENT_TARGET = "15.0"

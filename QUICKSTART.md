@@ -53,8 +53,10 @@ cargo install cargo-apk
 Set your SDK/NDK paths (adjust versions to match your install):
 
 ```bash
-export ANDROID_SDK_ROOT="$HOME/Android/Sdk"
-export ANDROID_NDK_ROOT="$ANDROID_SDK_ROOT/ndk/26.1.10909125"
+export ANDROID_HOME="$HOME/Android/Sdk"
+export ANDROID_NDK_ROOT="$ANDROID_HOME/ndk/26.1.10909125"
+export NDK_HOME="$ANDROID_NDK_ROOT"
+# Note: ANDROID_SDK_ROOT is deprecated by Google, use ANDROID_HOME
 ```
 
 ### 2. Build the APK
@@ -107,6 +109,7 @@ cargo install cargo-bundle
 
 ```bash
 cargo build -p tomb_of_heroes_app \
+  --bin tomb_of_heroes_app \
   --target aarch64-apple-ios-sim \
   --release
 ```
@@ -115,6 +118,7 @@ cargo build -p tomb_of_heroes_app \
 
 ```bash
 cargo build -p tomb_of_heroes_app \
+  --bin tomb_of_heroes_app \
   --target aarch64-apple-ios \
   --release
 ```
@@ -213,8 +217,9 @@ The game verifies CRC32 integrity and `StateHash` on import, so a corrupted or t
 | Issue | Fix |
 |---|---|
 | `cargo: command not found` | Run `source "$HOME/.cargo/env"` or restart your shell |
-| `cargo-apk` build fails | Verify `ANDROID_SDK_ROOT` and `ANDROID_NDK_ROOT` are set and point to matching NDK r23+ |
+| `cargo-apk` build fails | Verify `ANDROID_HOME` and `ANDROID_NDK_ROOT` are set and point to matching NDK r23+ |
 | iOS: code signing error | Open in Xcode, set your Team under *Signing & Capabilities* |
+| iOS: `___chkstk_darwin` linker error | Set `IPHONEOS_DEPLOYMENT_TARGET=15.0` (configured in `.cargo/config.toml`) |
 | iOS Simulator: `arch` mismatch | Use `aarch64-apple-ios-sim` for Apple Silicon Macs, `x86_64-apple-ios` for Intel |
 | Linux desktop: linker errors | Install the system dependencies listed above |
 | Black screen on device | Ensure Vulkan/GLES3 is supported; check `adb logcat` for Bevy/wgpu errors |

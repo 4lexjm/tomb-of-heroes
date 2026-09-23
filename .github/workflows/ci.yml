@@ -61,6 +61,8 @@ jobs:
 
       - name: Locate or Install Android NDK
         run: |
+          unset ANDROID_SDK_ROOT
+          export ANDROID_HOME="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
           NDK_DIR=$(find "${ANDROID_HOME}/ndk" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | sort -V | tail -n 1)
           if [ -z "$NDK_DIR" ]; then
             echo "Installing Android NDK r26b via sdkmanager..."
@@ -102,7 +104,10 @@ jobs:
           fi
 
       - name: Build Release APK
-        run: cargo apk build --package tomb_of_heroes_app --lib --release
+        run: |
+          unset ANDROID_SDK_ROOT
+          export ANDROID_HOME="${ANDROID_HOME:-/usr/local/lib/android/sdk}"
+          cargo apk build --package tomb_of_heroes_app --lib --release
 
       - name: Upload Android APK
         uses: actions/upload-artifact@v4
@@ -118,6 +123,8 @@ jobs:
     name: Build iOS Artifacts (Simulator & Device)
     needs: validate-specs-and-core
     runs-on: macos-14
+    env:
+      IPHONEOS_DEPLOYMENT_TARGET: "15.0"
 
     steps:
       - name: Checkout repository
@@ -135,23 +142,25 @@ jobs:
           key: "ios-aarch64"
 
       - name: Build for iOS Simulator (aarch64-apple-ios-sim)
-        run: cargo build --package tomb_of_heroes_app --target aarch64-apple-ios-sim --release
+        run: cargo build --package tomb_of_heroes_app --bin tomb_of_heroes_app --target aarch64-apple-ios-sim --release
 
       - name: Package iOS Simulator App
         run: |
           mkdir -p build/ios/simulator/TombOfHeroes.app
           cp target/aarch64-apple-ios-sim/release/tomb_of_heroes_app build/ios/simulator/TombOfHeroes.app/TombOfHeroes
           cp packaging/ios/Info.plist build/ios/simulator/TombOfHeroes.app/Info.plist
+          cp -r assets build/ios/simulator/TombOfHeroes.app/assets
           cd build/ios/simulator && zip -r ../../../tomb-of-heroes-ios-simulator.app.zip TombOfHeroes.app
 
       - name: Build for iOS Device (aarch64-apple-ios)
-        run: cargo build --package tomb_of_heroes_app --target aarch64-apple-ios --release
+        run: cargo build --package tomb_of_heroes_app --bin tomb_of_heroes_app --target aarch64-apple-ios --release
 
       - name: Package iOS Device Unsigned IPA
         run: |
           mkdir -p build/ios/device/Payload/TombOfHeroes.app
           cp target/aarch64-apple-ios/release/tomb_of_heroes_app build/ios/device/Payload/TombOfHeroes.app/TombOfHeroes
           cp packaging/ios/Info.plist build/ios/device/Payload/TombOfHeroes.app/Info.plist
+          cp -r assets build/ios/device/Payload/TombOfHeroes.app/assets
           cd build/ios/device && zip -r ../../../tomb-of-heroes-ios-device-unsigned.ipa Payload
 
       - name: Upload iOS Simulator App (.zip)
