@@ -11,9 +11,11 @@ If you do not want to set up local mobile SDKs and cross-compilers, **pre-built 
 1. Go to the **Actions** tab on GitHub.
 2. Select the latest **CI & Mobile Artifacts Build** run.
 3. Scroll down to **Artifacts** to download:
-   - 🤖 `tomb-of-heroes-android-apk` : Release APK (ARM64) ready to install on Android (`adb install tomb_of_heroes_app.apk`).
-   - 🍏 `tomb-of-heroes-ios-simulator-app` : `.app.zip` bundle for Apple Silicon iOS Simulator (`xcrun simctl install booted TombOfHeroes.app`).
-   - 📱 `tomb-of-heroes-ios-device-unsigned-ipa` : Unsigned IPA for physical device sideloading via AltStore, Sideloadly, or TrollStore.
+   - 🤖 `tomb-of-heroes-android-apk-b<BUILD>` : Release APK (ARM64) ready to install on Android (`adb install tomb_of_heroes_app.apk`).
+   - 🍏 `tomb-of-heroes-ios-simulator-app-b<BUILD>` : `.app.zip` bundle for Apple Silicon iOS Simulator (`xcrun simctl install booted TombOfHeroes.app`).
+   - 📱 `tomb-of-heroes-ios-device-unsigned-ipa-b<BUILD>` : Unsigned IPA for physical device sideloading via AltStore, Sideloadly, or TrollStore.
+
+> Details on versioning and automated build numbers can be found in [`docs/VERSIONING.md`](docs/VERSIONING.md).
 
 ---
 

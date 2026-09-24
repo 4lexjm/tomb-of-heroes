@@ -76,12 +76,21 @@ bevy = { version = "0.15", default-features = false, features = [
 # Métadonnées Android pour cargo-apk
 # ──────────────────────────────────────────────────────────────────────────────
 [package.metadata.android]
+version_name = "0.1.0+build.1"
+version_code = 1
 package = "com.tombofheroes.tactical"
 label = "Tomb of Heroes"
 build_targets = ["aarch64-linux-android"]
-icon = "@mipmap/ic_launcher"
 res = "res"
+resources = "res"
 assets = "../../assets"
+
+[package.metadata.android.application]
+label = "Tomb of Heroes"
+icon = "@mipmap/ic_launcher"
+
+[package.metadata.android.application.activity]
+label = "Tomb of Heroes"
 
 [package.metadata.android.sdk]
 min_sdk_version = 23
@@ -135,3 +144,8 @@ path = "tests/test_frontend_render_sync_and_assets.rs"
 [[test]]
 name = "test_frontend_hud_and_touch_targets"
 path = "tests/test_frontend_hud_and_touch_targets.rs"
+
+[[test]]
+name = "test_mobile_metadata_and_icons"
+path = "tests/test_mobile_metadata_and_icons.rs"
+

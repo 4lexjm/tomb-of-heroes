@@ -12,6 +12,7 @@ pub mod plugin;
 pub mod render;
 pub mod simulation;
 pub mod ui;
+pub mod version;
 pub mod viewport;
 
 pub use camera::{CameraSettings, PixelCamera, PixelCameraPlugin};
@@ -23,6 +24,7 @@ pub use render::{
 };
 pub use simulation::{advance_simulation_system, FixedTickAccumulator, WorldSimulation};
 pub use ui::{touch_btn, HudPlugin, HudState, PlacementTool, MIN_TOUCH_TARGET_SIZE};
+pub use version::{BUILD_NUMBER, FULL_VERSION, VERSION};
 pub use viewport::{
     compute_pixel_perfect_scale, SafeZone, ViewportGeometry, LOGICAL_HEIGHT, LOGICAL_WIDTH_MAX,
     LOGICAL_WIDTH_MIN, LOGICAL_WIDTH_REF,
@@ -40,7 +42,7 @@ pub fn build_app() -> bevy::app::App {
             .set(bevy::render::texture::ImagePlugin::default_nearest())
             .set(bevy::window::WindowPlugin {
                 primary_window: Some(bevy::window::Window {
-                    title: "Tomb of Heroes".into(),
+                    title: format!("Tomb of Heroes v{FULL_VERSION}"),
                     ..Default::default()
                 }),
                 ..Default::default()

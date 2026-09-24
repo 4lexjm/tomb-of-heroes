@@ -9,6 +9,8 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
+  APP_BUILD_NUMBER: ${{ github.run_number }}
+  APP_BUILD_SHA: ${{ github.sha }}
 
 jobs:
   # ────────────────────────────────────────────────────────────────────────────
@@ -20,7 +22,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -31,6 +33,10 @@ jobs:
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: ". -> target"
+
+      - name: Validate Version Consistency
+        run: |
+          python3 scripts/bump_version.py --check
 
       - name: Check Formatting
         run: cargo fmt --all --check
@@ -51,10 +57,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Java 17
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v6
         with:
           distribution: 'temurin'
           java-version: '17'
@@ -103,6 +109,9 @@ jobs:
             echo "Release keystore already present."
           fi
 
+      - name: Inject Android Build Metadata
+        run: python3 scripts/inject_build_metadata.py --build-number ${{ github.run_number }} --sha ${{ github.sha }}
+
       - name: Build Release APK
         run: |
           unset ANDROID_SDK_ROOT
@@ -110,9 +119,9 @@ jobs:
           cargo apk build --package tomb_of_heroes_app --lib --release
 
       - name: Upload Android APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: tomb-of-heroes-android-apk
+          name: tomb-of-heroes-android-apk-b${{ github.run_number }}
           path: target/release/apk/tomb_of_heroes_app.apk
           if-no-files-found: error
 
@@ -128,7 +137,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install Rust toolchain (iOS targets)
         uses: dtolnay/rust-toolchain@stable
@@ -141,6 +150,9 @@ jobs:
           workspaces: ". -> target"
           key: "ios-aarch64"
 
+      - name: Inject iOS Build Metadata
+        run: python3 scripts/inject_build_metadata.py --build-number ${{ github.run_number }} --sha ${{ github.sha }}
+
       - name: Build for iOS Simulator (aarch64-apple-ios-sim)
         run: cargo build --package tomb_of_heroes_app --bin tomb_of_heroes_app --target aarch64-apple-ios-sim --release
 
@@ -149,6 +161,7 @@ jobs:
           mkdir -p build/ios/simulator/TombOfHeroes.app
           cp target/aarch64-apple-ios-sim/release/tomb_of_heroes_app build/ios/simulator/TombOfHeroes.app/TombOfHeroes
           cp packaging/ios/Info.plist build/ios/simulator/TombOfHeroes.app/Info.plist
+          if [ -d packaging/ios/icons ]; then cp packaging/ios/icons/*.png build/ios/simulator/TombOfHeroes.app/; fi
           cp -r assets build/ios/simulator/TombOfHeroes.app/assets
           cd build/ios/simulator && zip -r ../../../tomb-of-heroes-ios-simulator.app.zip TombOfHeroes.app
 
@@ -160,19 +173,20 @@ jobs:
           mkdir -p build/ios/device/Payload/TombOfHeroes.app
           cp target/aarch64-apple-ios/release/tomb_of_heroes_app build/ios/device/Payload/TombOfHeroes.app/TombOfHeroes
           cp packaging/ios/Info.plist build/ios/device/Payload/TombOfHeroes.app/Info.plist
+          if [ -d packaging/ios/icons ]; then cp packaging/ios/icons/*.png build/ios/device/Payload/TombOfHeroes.app/; fi
           cp -r assets build/ios/device/Payload/TombOfHeroes.app/assets
           cd build/ios/device && zip -r ../../../tomb-of-heroes-ios-device-unsigned.ipa Payload
 
       - name: Upload iOS Simulator App (.zip)
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: tomb-of-heroes-ios-simulator-app
+          name: tomb-of-heroes-ios-simulator-app-b${{ github.run_number }}
           path: tomb-of-heroes-ios-simulator.app.zip
           if-no-files-found: error
 
       - name: Upload iOS Device Unsigned IPA
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
-          name: tomb-of-heroes-ios-device-unsigned-ipa
+          name: tomb-of-heroes-ios-device-unsigned-ipa-b${{ github.run_number }}
           path: tomb-of-heroes-ios-device-unsigned.ipa
           if-no-files-found: error

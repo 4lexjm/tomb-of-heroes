@@ -169,7 +169,10 @@ pub fn hud_status_bar_system(
                         )
                         .min_size(egui::vec2(44.0, 44.0)),
                     )
-                    .on_hover_text("Le Sanctuaire & Lore")
+                    .on_hover_text(format!(
+                        "Le Sanctuaire & Lore (v{})",
+                        crate::version::FULL_VERSION
+                    ))
                     .clicked()
                 } else {
                     ui.add(touch_btn(
@@ -178,7 +181,10 @@ pub fn hud_status_bar_system(
                             .strong()
                             .size(12.0),
                     ))
-                    .on_hover_text("Le Sanctuaire & Lore")
+                    .on_hover_text(format!(
+                        "Le Sanctuaire & Lore (v{})",
+                        crate::version::FULL_VERSION
+                    ))
                     .clicked()
                 };
 
@@ -921,6 +927,13 @@ pub fn hud_about_modal_system(
                     RichText::new("— Stratégie Déterministe & Nécromancie Tactique —")
                         .italics()
                         .color(Color32::from_rgb(0xA5, 0x30, 0x30)),
+                );
+                ui.add_space(4.0);
+                ui.label(
+                    RichText::new(format!("Version {}", crate::version::FULL_VERSION))
+                        .size(11.0)
+                        .monospace()
+                        .color(Color32::from_rgb(0x88, 0xAA, 0xBB)),
                 );
 
                 ui.add_space(8.0);
